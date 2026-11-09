@@ -3,7 +3,7 @@
 > 详细验收标准/验证命令见同目录 `plan.md`；完成一项勾一项；每个里程碑结束建议录一段演示视频 + `ros2 bag` 存档。
 
 ## Phase 0：启动（它们可以先做）
-- [ ] T0.1 建 GitHub 仓库（org: Moonlit-Blade-Bearer）+ 目录骨架 + 迁入现有两份文档
+- [x] T0.1 本地仓库骨架 + 首提交完成（2026-11-09，5827633，22 文件：README/骨架/docs 四件套/架构图/审计报告/审计脚本）；剩：**org 建空仓 `termite-rover` → remote add + push**
 - [x] T0.2 采购清单定稿（盘点完成：白蚁来源 D4 已落实；待补 A8/B1/B3/F1/F5/F6，见 docs/盘点清单.md「盘点结论」）
 - [ ] T0.3 上板开发环境：VS Code Remote-SSH 进 Jetson/Pi5 + Foxglove Studio 看话题 + 容器内 colcon helloworld（PC 只留 VMware 备刷机恢复）
 - [ ] T0.4 手柄 + 工具到位（PC 上能发 /teleop/cmd_vel）
@@ -12,7 +12,7 @@
 - [ ] 硬件全部到齐或明确到货时间
 
 ## Phase 1：底盘（脊髓）
-- [ ] T1.1 幻尔控制器上电，舵机/电机方向与急停正确
+- [x] T1.1 幻尔控制器上电自检（✅ 用户完成 2026-11-09，舵机/急停正常）
 - [ ] T1.2 官方 ROS2 驱动栈（ros_robot_controller + controller）在 **Jetson 容器内**跑通（先完成 T2.1/T2.2）：/odom_raw 30–50Hz
 - [ ] T1.3 手柄遥控：10m 往返 ×3 无碰撞，急停 < 0.2s
 - [ ] T1.4 里程计标定 + 实测最小转弯半径 R_min，出《标定记录.md》
