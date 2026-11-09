@@ -1,0 +1,27 @@
+# Build
+build/
+install/
+log/
+*.o
+*.elf
+*.bin
+*.hex
+*.map
+
+# Python
+__pycache__/
+*.py[cod]
+
+# ROS bag
+*.db3
+*.bag
+rosbag/
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db

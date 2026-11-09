@@ -1,0 +1,24 @@
+=== npz keys ===
+  x: shape=(1100, 256, 160) dtype=int16
+  y: shape=(1100,) dtype=float32
+      min=0.0000 max=50.0000 mean=27.2273
+      unique(<=40): [ 0.  5. 10. 15. 20. 25. 30. 35. 40. 45. 50.]
+  window_idx: shape=(1100,) dtype=int64
+      min=1175.0000 max=174096.0000 mean=105696.8818
+  split_code: shape=(1100,) dtype=int8
+      min=3.0000 max=3.0000 mean=3.0000
+      unique(<=40): [3.]
+
+=== torch 2.5.1+cu121 cuda: True ===
+checkpoint 顶层键: ['model_state', 'feat_mean', 'feat_std', 'y_mean', 'y_std', 'cfg', 'epoch', 'val_metrics', 'data']
+  权重张量形状:
+torch 部分异常: AttributeError("'collections.OrderedDict' object has no attribute 'shape'")
+
+=== config 备忘 ===
+WINDOW_LEN: 256  N_ANT: 4  N_BIN: 20  SVD_K: 1  N_BANDS: 14  F_CHANNELS: 20  THICKNESS_MAX: 50.0  WINDOWS_PER_SESSION: 4
+  直接加载失败: Error(s) in loading state_dict for DepthCNN:
+	Missing key(s) in state_dict: "backbone.0.weight", "backbone.1.weight", "backbone.1.bias", "backbone.1.running_mean", "backbone.1.running_var", "backbone.4.weight", "backbone.5.weight", "backbone.5.bias", "backbone.5.running_mean", "backbone.5.running_var", "backbone.8.weight", "backbone.9.weight", "backbone.9.bias", "backbone.9.running_mean", "backbone.9.running_var", "head.1.weight", "head.1.bias", "head.4.weight", "head.4.bias". 
+	Unexpected key(s) in state_dict: "model_state", "feat_mean", "feat_std", "y_mean", "y_std", "cfg", "epoch", "val_metrics", "data". 
+  模型加载成功: False
+
+DONE

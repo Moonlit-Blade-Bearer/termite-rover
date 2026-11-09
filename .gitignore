@@ -1,0 +1,17 @@
+# 大文件 / 数据集主存（E:\白蚁数据集)不入库
+*.npz
+*.bin
+*.pth
+*.h5
+--main.zip
+数据集抽样.txt
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# 编辑器与系统
+.vscode/
+~$*
+Thumbs.db
