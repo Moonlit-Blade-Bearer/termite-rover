@@ -78,9 +78,9 @@
 ## Phase 11：CAN 融合与去树莓派
 - [ ] T11.1 Jetson CAN up：USB-CAN（首选）或 Waveshare MCP2515 方案
 - [ ] T11.2 《CAN 协议.md》：ID 表、心跳、错误码；3 节点 24h 0 错帧
-- [ ] T11.3 机械臂 STM32 切 CAN（bxCAN + SN65HVD230），行为与 UART 一致
-- [ ] T11.4 幻尔控制器 CAN 能力确认（不行就留 UART，记录决策）
-- [ ] T11.5 摘除 Pi5，职责迁 Jetson；24h 稳定性达标
+- [ ] T11.3 F407 板 CAN 节点固件（bxCAN + SN65HVD230/USB-CAN），承担 CAN 网络辅助通道（毫米波/声学等；ArmPi Ultra 臂本身不走此线）
+- [x] T11.4 ✅ 定案（2026-11-11）：底盘 RRC-M4 板载无 CAN → **底盘维持 UART**（`ros_robot_controller` ROS2 包），CAN 网络由 USB-CAN/F407 承担
+- [ ] T11.5 臂端 Pi5 保留（ArmPi Ultra 自带主控，不摘除）；臂端官方栈随车 24h 稳定性达标
 - [ ] T11.6（可选+真实需要）CAN FD
 
 ### Checkpoint D（最终架构）

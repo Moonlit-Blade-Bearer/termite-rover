@@ -194,16 +194,16 @@ termite-rover/                      # 建议放入 GitHub org: Moonlit-Blade-Bea
 - **T10.3 对齐融合**：`message_filters::ApproximateTimeSynchronizer`（`/scan`+`/detections`+`/termite/detection`），slop 按 T10.2 结果设定（初值 50 ms）；融合规则先用加权投票，升级 Dempster-Shafer 可选。
   - 验收：ros2 bag 复放，对齐成功帧占比 ≥ 95%，对齐时间差 P95 < 10 ms（日志自动打印）。
 
-### M11 总线融合与去树莓派5（2–3 周）
+### M11 总线融合（2–3 周）——**2026-11-11 改：原"去树莓派5"目标取消**（Pi5 为 ArmPi Ultra 自带主控，臂端官方栈不摘除）
 - **T11.1 Jetson 侧 CAN 启用**：方案 A = USB-CAN（CANable/candleLight；国产创芯 USBCAN-II 也行）**首选**；方案 B = Waveshare RS485/CAN 板（MCP2515）+ `jetson-nano-waveshare-can` Ubuntu 20.04 镜像/DTB 流程 → `can0@500k`。
   - 验收：`candump can0` 与对端互发成功；PM 故障注入测试（拔线重插不丢节点）。
 - **T11.2 协议定义**：《CAN 协议.md》：帧 ID 表（底盘/机械臂/云台/状态）、DLC、CRC（CAN 自带 CRC15，上层不用再加）、`/odom`、心跳 10 Hz、错误码规范。
   - 验收：两块 MCU + Jetson 三节点 24 小时共网，0 总线错误帧计数（`ip -s -s link show can0`）。
-- **T11.3 机械臂 STM32 直连 CAN**：STM32 弄开 bxCAN + SN65HVD230，移植指令帧（`/arm/joint_cmd` 走 CAN 到 CAN）。
-  - 验收：从 Jetson 发指令动作组，与原 UART 链路行为一致。
-- **T11.4 幻尔控制器 CAN 化（视硬件能力）**：确认幻尔控制板固件支持 CAN/其 SDK 是否暴露 CAN——**不确定则维持 UART**，理由记录入文档（避免为"全 CAN"伪需求改动稳定链路）。
+- **T11.3 F407 CAN 节点**（2026-11-11 改）：机械臂已定型 ArmPi Ultra（不走此线）；F407 板作为 CAN 网络节点（bxCAN + SN65HVD230/USB-CAN），承担毫米波/声学等辅助通道接入与状态心跳。
+  - 验收：Jetson 侧经 `can0` 收发辅助传感器数据帧 24h 0 错帧。
+- **T11.4 底盘 CAN 化：定案不做**（2026-11-11）：底盘 RRC-M4 板载无 CAN（教程全篇无 CAN 字样，控制通道仅 UART + I2C 0x7A）→ **底盘维持 UART（`ros_robot_controller` ROS2 包）**，CAN 网络由 USB-CAN/F407 承担（避免为"全 CAN"伪需求改动稳定链路）。
   - 验收：决策文档一句话结论，留凭证链接（SDK 邮件或手册截图）。
-- **T11.5 摘除 Pi5**：其职责（IK/关节调度）迁 Jetson 容器跑；STM32 经 CAN 接收关节指令；编号回流测试。
+- **T11.5 臂端 Pi5 去留：定案保留**（2026-11-11）：Pi5 是 ArmPi Ultra 自带主控（官方 ROS2 栈跑在其上），不摘除；本任务改为验证臂端栈随车 24h 稳定性 + 断电安全位联动。
   - 验收：无 Pi5 状态整 24 h 连续导航 + 机械臂动作，无致命故障；记录 CPU/内存/温度曲线。
 - **T11.6 平线检查（可选）**：CAN FD 仅在 M11.2 协议证明带宽瓶颈为真时启用。
 
@@ -260,7 +260,7 @@ termite-rover/                      # 建议放入 GitHub org: Moonlit-Blade-Bea
 | 固定点旋转不能建 2D 地图（认知误区） | 高 | M3 遥控绕场建图（已写入路线） |
 | 毫米波白蚁探测在木料/土壤中的穿透与信噪比 | 高 | 提前做 T9.0 文献评审 + 受控实验先行；准备声学振动备选通道；二者融合提升稳健性 |
 | 白蚁实验数据获取时间（来源、饲养、观察） | 高 | M0 即联系来源；培养环境提前准备 |
-| 幻尔控制器 CAN 固件未知 | 中 | T11.4 之前先与幻尔确认；不可用则保留 UART，只把机械臂切 CAN |
+| ~~幻尔控制器 CAN 固件未知~~ **已消除（2026-11-11）** | — | 底盘 RRC-M4 板载无 CAN → 维持 UART 定案（T11.4）；CAN 网络由 USB-CAN/F407 承担 |
 | Nav2 阿克曼调参费时 | 中 | 参考 T4.2 给出的参数清单；禁回旋恢复；调参进 bag 复现闭环 |
 | 丢包/掉帧（文档已列） | 中 | 帧头+长度+seq+CRC16、`tools/drop_check.py` 持续统计、必要时升级物理层（UART→以太网） |
 | RTAB-Map 需要深度相机 | 中 | 先只做"检测载荷"；视觉 SLAM 待深度相机到位后再升级 |
@@ -284,8 +284,10 @@ termite-rover/                      # 建议放入 GitHub org: Moonlit-Blade-Bea
 7. ✅ **机械臂定型：幻尔 ArmPi Ultra**（6DOF 铝合金 + 25kg 级串行总线舵机 + 板载 STM32F103RBT6 运动子控制器 + Raspberry Pi 5 主控 + 3D 深度相机 + 官方 ROS2 包 `Hiwonder/ArmPi-Ultra`；供电 7.4V 6A）。M7 已改版为"整机方案"（见 M7 段）；原自研 F407 固件线取消，F407 转 T11.4 CAN 融合复用；MoveIt2 暂不引入。
 8. ✅ **深度相机：不另购（B4 关闭）**——ArmPi Ultra 自带，接其 Pi5、经 ROS2 网络发给 Jetson；RTAB-Map 升级线保留为"低成本可行"，使用时臂固定预设位（相机随臂位姿运动，不能边动边建图）。
 
+**已解决（续 4，2026-11-11）：**
+9. ✅ **底盘型号落地：幻尔"大型阿克曼底盘"（即 JetAcker 套件底盘，资料 V1.0 20231024）**。硬件链：RRC-M4 控制板（RosRobotControllerM4 固件，源码包名 `RosRobotControllerM4_JETACKER.rar` 佐证）+ **HTS-20H 智能总线舵机**转向（半双工 UART 115200，ID=9，pulse 安全范围 300–800）+ JGB37-520R90-12 编码器减速电机 ×2（12V，1:90，AB 相霍尔编码）+ YX4055 驱动（2A/路）。**CAN：板载无 CAN**（教程全篇无 CAN 字样，控制通道仅 UART+I2C 0x7A）→ **T11.4 定案：底盘维持 UART（`ros_robot_controller` ROS2 包），CAN 网络由 USB-CAN/F407 承担**。另：教程明确警告主控不能从驱动板 5V 取电（只进不出、1A 上限）——反向验证 A8 双轨供电设计必要性。
+
 **待确认（回复后更新对应里程碑）：**
-9. **底盘那套幻尔的具体型号**（JetAcker？ROSMASTER X3？还是别的——看说明书/包装盒/APP 里的型号名告诉我即可）？→ 决定 T11.4 CAN 融合形态（顺带瞄一眼控制器板上有没有 CAN 收发器芯片，如 TJA1050/SN65HVD230）
 10. 平台升级备选：**Jetson Orin Nano**（新代 Jetson 模块）——默认**不换**，理由与触发条件见对话记录；触发 = M10 融合算力实测不足，或需要原生 CAN 且不想用 USB-CAN 适配器时再议
 
 ## 9. 验收总表（_DEFINITION OF DONE_）
