@@ -4,7 +4,7 @@
 
 ## Phase 0：启动（它们可以先做）
 - [x] T0.1 ✅ 全部完成（2026-11-09）：公开仓库 https://github.com/Moonlit-Blade-Bearer/termite-rover ，main 已含骨架提交 5827633 + 53c0513
-- [x] T0.2 采购清单定稿（盘点完成：白蚁来源 D4 已落实；待补 A8/B1/B3/F1/F5/F6，见 docs/盘点清单.md「盘点结论」）
+- [x] T0.2 采购清单定稿（盘点完成：白蚁来源 D4 已落实；待下单 A8［选型已定稿 2026-11-11：12V→5V 同步整流 ×2 双轨］/B1/B3/F1/F5/F6，见 docs/盘点清单.md「盘点结论」）
 - [ ] T0.3 上板开发环境：VS Code Remote-SSH 进 Jetson/Pi5 + Foxglove Studio 看话题 + 容器内 colcon helloworld（PC 只留 VMware 备刷机恢复）
 - [ ] T0.4 手柄 + 工具到位（PC 上能发 /teleop/cmd_vel）
 
