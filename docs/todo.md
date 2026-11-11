@@ -12,13 +12,13 @@
 - [ ] 硬件全部到齐或明确到货时间
 
 ## Phase 1：底盘（脊髓）
-- [x] T1.1 幻尔控制器上电自检（✅ 用户完成 2026-11-09，舵机/急停正常）
+- [x] T1.1 幻尔控制器上电自检（✅ 用户完成 2026-11-09，舵机/急停正常；2026-11-11 用户确认无异常）
 - [ ] T1.2 官方 ROS2 驱动栈（ros_robot_controller + controller）在 **Jetson 容器内**跑通（先完成 T2.1/T2.2）：/odom_raw 30–50Hz
 - [ ] T1.3 手柄遥控：10m 往返 ×3 无碰撞，急停 < 0.2s
 - [ ] T1.4 里程计标定 + 实测最小转弯半径 R_min，出《标定记录.md》
 
 ## Phase 2：Jetson 大脑
-- [ ] T2.1 备份官方 18.04 镜像 → 刷 Qengineering Ubuntu 20.04（64GB A1 卡）
+- [ ] T2.1 L4T 版本检查（`cat /etc/nv_tegra_release`）→ **R32.7.x 跳过刷机**（宿主机已装官方 18.04，2026-11-11）；更老则 apt 升级 32.7.x 或烧官方 JetPack 4.6.4 镜像（Qengineering 20.04 仅备选）
 - [ ] T2.2 Docker + `dustynv/ros:humble-ros-base-l4t-r32.7.1` + compose.yaml（开机自启）
 - [ ] T2.3 幻尔驱动包容器内 colcon build，遥控链路复现
 - [ ] T2.4 robot_localization EKF（odom_raw+imu→odom）+ TF 树，rviz 检查贴合无漂移

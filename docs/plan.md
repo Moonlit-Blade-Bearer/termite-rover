@@ -17,7 +17,7 @@
 
 | # | 原方案表述 | 核实结论（2026） | 落地做法 |
 | --- | --- | --- | --- |
-| 1 | "使用社区 Ubuntu 22.04 镜像跑 ROS2 Humble" | 原版 Jetson Nano 官方最高 JetPack 4.6.x（Ubuntu 18.04）；成熟的 22.04 社区镜像基本没有。**成熟方案 = Qengineering Ubuntu 20.04 镜像（JetPack 4.6.2 + CUDA 10.2） + Docker 运行 `dustynv/ros:humble-ros-base-l4t-r32.7.1`（含 CUDA）**，或 Ubuntu 20.04 上源码编译 Humble | 见 T2.1–T2.3。若预算允许后续换 **Jetson Orin Nano**（Ubuntu 22.04 + 官方 JetPack 5/6，且 40-pin 自带 CAN 引脚 29/31），是"最有性价比的架构级解耦" |
+| 1 | "使用社区 Ubuntu 22.04 镜像跑 ROS2 Humble" | 原版 Jetson Nano 官方最高 JetPack 4.6.x（Ubuntu 18.04）；成熟的 22.04 社区镜像基本没有。**成熟方案 = Qengineering Ubuntu 20.04 镜像（JetPack 4.6.2 + CUDA 10.2） + Docker 运行 `dustynv/ros:humble-ros-base-l4t-r32.7.1`（含 CUDA）**，或 Ubuntu 20.04 上源码编译 Humble | 见 T2.1–T2.3。若预算允许后续换 **Jetson Orin Nano**（Ubuntu 22.04 + 官方 JetPack 5/6，且 40-pin 自带 CAN 引脚 29/31），是"最有性价比的架构级解耦"。**2026-11-11 更新：宿主机已装官方 Ubuntu 18.04（JetPack 4.6 系）→ 与 l4t-r32.7.1 容器原生匹配，Qengineering 20.04 镜像降级为备选（容器自带 18.04 用户态，宿主版本不敏感）** |
 | 2 | "机器人停在固定点，原地旋转/云台扫描，采集 360° 点云构建地图" | **2D 单线激光雷达在固定点只能得到一个环向断面，无法生成平面地图**。建图必须由底盘低速移动完成 | M3 改为"遥控低速绕场建图"；"固定地点"应理解为"固定场地" |
 | 3 | "Nav2 中配置阿克曼运动学与最小转弯半径" | Nav2 Humble 原生支持：全局规划用 `nav2_smac_planner` 的 **SmacPlannerHybrid**（DUBIN=只前进 / REEDS-SHEPP=允许倒车，参数 `minimum_turning_radius` 居中）；局部跟踪用 **RegulatedPurePursuitController**（官方明确支持阿克曼，但必须关掉 `use_rotate_to_heading`，车不能原地自转） | 见 T4.2 参数清单 |
 | 4 | "超声波接 Jetson GPIO" | 可行（HC-SR04 的 Echo 是 5V，需分压或买 3.3V 兼容的 **HC-SR04P**），但更稳的是接在幻尔控制器板上（MCU 级 µs 计时准确、抗抖动），经串口协议上传 | 先 Jetson GPIO 快速验证，成熟后迁移到幻尔控制器板 |
@@ -84,7 +84,7 @@ termite-rover/                      # 建议放入 GitHub org: Moonlit-Blade-Bea
 
 ### M1 底盘"脊髓"层跑通——变成一台可遥控的阿克曼车（1–2 周）
 
-> **上板优先执行序（2026-10-18 修订）**：T1.2 不再依赖 PC 装 ROS2，改在 Jetson 容器内跑。执行顺序调整为：**T2.1（刷机）→ T2.2（容器起）→ T1.1 → T1.2（容器内）→ T1.3 → T1.4**。T1.1 的控制板自检用幻尔官方 Windows 上位机/APP 完成，全程无 ROS 依赖。
+> **上板优先执行序（2026-10-18 修订；2026-11-11 更新：宿主机已是官方 Ubuntu 18.04，T2.1 大概率跳过刷机）**：T1.2 不再依赖 PC 装 ROS2，改在 Jetson 容器内跑。执行顺序调整为：**T2.1（L4T 版本检查，32.7.x 则免刷机）→ T2.2（容器起）→ T1.1 → T1.2（容器内）→ T1.3 → T1.4**。T1.1 的控制板自检用幻尔官方 Windows 上位机/APP 完成，全程无 ROS 依赖。
 - **T1.1 幻尔控制器上电自检**：按官方手册烧/载固件，APP 遥控验证每个舵机方向、电机正反转、编码器计数方向。
   - 验收：轮子前后正确、转向随转向舵机正确、急停立即停。
 - **T1.2 官方 ROS2 驱动栈接入（容器内执行）**：控制板 USB 直连 Jetson，在 Humble 容器内装幻尔 `ros_robot_controller` + `controller` 包，发布 `/odom_raw`（`nav_msgs/Odometry`）、`/imu` 等；订阅端发 `/controller/cmd_vel` 时车辆能有效执行。
@@ -96,7 +96,7 @@ termite-rover/                      # 建议放入 GitHub org: Moonlit-Blade-Bea
 
 ### M2 大脑上线：Jetson 系统 + ROS2（1–2 周）
 > 风险最高的一条链路，务必先备份。
-- **T2.1 刷系统**：Qengineering `Jetson-Nano-Ubuntu-20-image`（JetPack 4.6.x，含 CUDA 10.2/OpenCV/PyTorch）烧 64GB A1 卡；记录镜像来源与 md5。**先备份官方 18.04 镜像。**
+- **T2.1 系统基线（2026-11-11 改：宿主机已有官方 Ubuntu 18.04，先检查再决定是否刷机）**：板端跑 `cat /etc/nv_tegra_release`——**R32.7.x → 跳过刷机直接进 T2.2**（l4t-r32.7.1 容器原生匹配）；R32.4–R32.6 → 优先 `sudo apt update && sudo apt full-upgrade` 升到 32.7.x（免刷机，需 ≥4GB 空闲），失败或怕折腾则烧官方 JetPack 4.6.4 SD 镜像（仍为 18.04）；Qengineering 20.04 镜像降级为备选（容器内自带 18.04 用户态，宿主版本不敏感）。
   - 验收：系统起机、FPS 正常、WiFi/有线可用、`jtop` 正常。
 - **T2.2 Docker + Humble 容器**：升级 Docker 后拉 `dustynv/ros:humble-ros-base-l4t-r32.7.1`；写 `docker/compose.yaml`：`--net=host --privileged`、挂载 `/dev/ttyUSB*`/`/dev/ttyTHS*`、`ROS_DOMAIN_ID=42`、自动重启。
   - 验收：容器内 `ros2 topic list` 正常；Jetson 断电重启后栈自动恢复。
@@ -256,7 +256,7 @@ termite-rover/                      # 建议放入 GitHub org: Moonlit-Blade-Bea
 
 | 风险 | 等级 | 对策 |
 | --- | --- | --- |
-| Jetson Nano B01 软件老旧（JetPack 4.6 / Ubuntu 18.04 官方上限） | 高 | 按已核实的 Qengineering 20.04 + Docker Humble 方案走；若预算允许**换 Orin Nano Super** 一劳永逸（Ubuntu 22.04 + 自带 CAN 引脚），可分两步：先用 Nano 跑通全链，性能够用时再换主板 |
+| Jetson Nano B01 软件老旧（JetPack 4.6 / Ubuntu 18.04 官方上限） | 中（已缓解） | **2026-11-11：宿主机已是 18.04 = 容器原生匹配，无需刷 20.04**——ROS2/CUDA 全活在 dustynv 容器里，宿主只出内核+驱动；若预算允许**换 Orin Nano Super** 一劳永逸（Ubuntu 22.04 + 自带 CAN 引脚），可分两步：先用 Nano 跑通全链，性能够用时再换主板 |
 | 固定点旋转不能建 2D 地图（认知误区） | 高 | M3 遥控绕场建图（已写入路线） |
 | 毫米波白蚁探测在木料/土壤中的穿透与信噪比 | 高 | 提前做 T9.0 文献评审 + 受控实验先行；准备声学振动备选通道；二者融合提升稳健性 |
 | 白蚁实验数据获取时间（来源、饲养、观察） | 高 | M0 即联系来源；培养环境提前准备 |
