@@ -18,7 +18,7 @@
 - [ ] T1.4 里程计标定 + 实测最小转弯半径 R_min，出《标定记录.md》
 
 ## Phase 2：Jetson 大脑
-- [ ] T2.1 L4T 版本检查（`cat /etc/nv_tegra_release`）→ **R32.7.x 跳过刷机**（宿主机已装官方 18.04，2026-11-11）；更老则 apt 升级 32.7.x 或烧官方 JetPack 4.6.4 镜像（Qengineering 20.04 仅备选）
+- [x] T2.1 ✅ L4T 检查完成（2026-11-12）：**R32.7.6 = JetPack 4.6.6（官方最新）→ 免刷机**；r32.7.1 容器可直接跑（同 32.7 线，CUDA 10.2 不变）。下一步 T2.2 起容器
 - [ ] T2.2 Docker + `dustynv/ros:humble-ros-base-l4t-r32.7.1` + compose.yaml（开机自启）
 - [ ] T2.3 幻尔驱动包容器内 colcon build，遥控链路复现
 - [ ] T2.4 robot_localization EKF（odom_raw+imu→odom）+ TF 树，rviz 检查贴合无漂移

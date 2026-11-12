@@ -96,7 +96,7 @@ termite-rover/                      # 建议放入 GitHub org: Moonlit-Blade-Bea
 
 ### M2 大脑上线：Jetson 系统 + ROS2（1–2 周）
 > 风险最高的一条链路，务必先备份。
-- **T2.1 系统基线（2026-11-11 改：宿主机已有官方 Ubuntu 18.04，先检查再决定是否刷机）**：板端跑 `cat /etc/nv_tegra_release`——**R32.7.x → 跳过刷机直接进 T2.2**（l4t-r32.7.1 容器原生匹配）；R32.4–R32.6 → 优先 `sudo apt update && sudo apt full-upgrade` 升到 32.7.x（免刷机，需 ≥4GB 空闲），失败或怕折腾则烧官方 JetPack 4.6.4 SD 镜像（仍为 18.04）；Qengineering 20.04 镜像降级为备选（容器内自带 18.04 用户态，宿主版本不敏感）。
+- **T2.1 系统基线（2026-11-11 改：宿主机已有官方 Ubuntu 18.04，先检查再决定是否刷机）**：板端跑 `cat /etc/nv_tegra_release`——**R32.7.x → 跳过刷机直接进 T2.2**（l4t-r32.7.1 容器原生匹配）；R32.4–R32.6 → 优先 `sudo apt update && sudo apt full-upgrade` 升到 32.7.x（免刷机，需 ≥4GB 空闲），失败或怕折腾则烧官方 JetPack 4.6.4 SD 镜像（仍为 18.04）；Qengineering 20.04 镜像降级为备选（容器内自带 18.04 用户态，宿主版本不敏感）。**2026-11-12 实测：R32.7.6（= JetPack 4.6.6，官方 4.6 系最新版，2024-11 发布）→ 免刷机，T2.1 关单**；r32.7.1 镜像在 32.7.x 宿主上直接可用（同线 BSP，CUDA 10.2 不变）。
   - 验收：系统起机、FPS 正常、WiFi/有线可用、`jtop` 正常。
 - **T2.2 Docker + Humble 容器**：升级 Docker 后拉 `dustynv/ros:humble-ros-base-l4t-r32.7.1`；写 `docker/compose.yaml`：`--net=host --privileged`、挂载 `/dev/ttyUSB*`/`/dev/ttyTHS*`、`ROS_DOMAIN_ID=42`、自动重启。
   - 验收：容器内 `ros2 topic list` 正常；Jetson 断电重启后栈自动恢复。
