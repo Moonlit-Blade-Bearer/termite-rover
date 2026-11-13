@@ -1,0 +1,17 @@
+# termite-rover 主控容器（Jetson Nano，宿主 L4T r32.7.6 / JetPack 4.6.6）
+# 用法：docker compose -f docker/compose.yaml up -d
+# 宿主 /etc/docker/daemon.json 已设 default-runtime=nvidia 与国内加速源
+services:
+  ros2:
+    image: dustynv/ros:humble-ros-base-l4t-r32.7.1
+    container_name: termite_ros2
+    network_mode: host            # DDS 跨机通信必需
+    privileged: true              # USB 串口(/dev/ttyACM0)与外设访问
+    environment:
+      - ROS_DOMAIN_ID=42
+    volumes:
+      - /home/chl/ros2_ws:/root/ros2_ws          # 工作空间常驻宿主，容器重建不丢
+    working_dir: /root/ros2_ws
+    command: >
+      bash -c "source /opt/ros/humble/install/setup.bash && tail -f /dev/null"
+    restart: unless-stopped

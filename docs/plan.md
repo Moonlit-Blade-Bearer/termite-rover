@@ -98,9 +98,9 @@ termite-rover/                      # 建议放入 GitHub org: Moonlit-Blade-Bea
 > 风险最高的一条链路，务必先备份。
 - **T2.1 系统基线（2026-11-11 改：宿主机已有官方 Ubuntu 18.04，先检查再决定是否刷机）**：板端跑 `cat /etc/nv_tegra_release`——**R32.7.x → 跳过刷机直接进 T2.2**（l4t-r32.7.1 容器原生匹配）；R32.4–R32.6 → 优先 `sudo apt update && sudo apt full-upgrade` 升到 32.7.x（免刷机，需 ≥4GB 空闲），失败或怕折腾则烧官方 JetPack 4.6.4 SD 镜像（仍为 18.04）；Qengineering 20.04 镜像降级为备选（容器内自带 18.04 用户态，宿主版本不敏感）。**2026-11-12 实测：R32.7.6（= JetPack 4.6.6，官方 4.6 系最新版，2024-11 发布）→ 免刷机，T2.1 关单**；r32.7.1 镜像在 32.7.x 宿主上直接可用（同线 BSP，CUDA 10.2 不变）。
   - 验收：系统起机、FPS 正常、WiFi/有线可用、`jtop` 正常。
-- **T2.2 Docker + Humble 容器**：升级 Docker 后拉 `dustynv/ros:humble-ros-base-l4t-r32.7.1`；写 `docker/compose.yaml`：`--net=host --privileged`、挂载 `/dev/ttyUSB*`/`/dev/ttyTHS*`、`ROS_DOMAIN_ID=42`、自动重启。
+- **T2.2 Docker + Humble 容器**：升级 Docker 后拉 `dustynv/ros:humble-ros-base-l4t-r32.7.1`；写 `docker/compose.yaml`：`--net=host --privileged`、挂载 `/dev/ttyUSB*`/`/dev/ttyTHS*`、`ROS_DOMAIN_ID=42`、自动重启。**2026-11-13 初验通过**：镜像拉取成功（经 dockerproxy.net 等加速源，Docker Hub 直连超时的国内网络问题已解决）、容器内 `ros2 topic list` 正常；注意该镜像 ROS 为源码编译安装于 `/opt/ros/humble/install/`，bash 启动已自动 source，手动 source 应为 `install/setup.bash` 而非标准 deb 路径。
   - 验收：容器内 `ros2 topic list` 正常；Jetson 断电重启后栈自动恢复。
-- **T2.3 幻尔驱动进容器**：把官方两包源码放 `~/ros2_ws`，容器内 `colcon build`。
+- **T2.3 幻尔驱动进容器**：把官方驱动源码放 `~/ros2_ws`，容器内 `colcon build`。**2026-11-13 源码锁定**：官方仓库 `Hiwonder/JetAcker`（Jetson_Nano 分支，commit `80639fd`）已核实 `ROS2/src/driver/` 含六包——`ros_robot_controller(+msgs)`、`controller`（`odom_publisher` 发 `/odom_raw`）、`servo_controller(+msgs)`、`sdk`；均为纯 Python（编译轻量）；RRC-M4↔Jetson 为 **USB 串口 `/dev/ttyACM0`**（自带 udev 规则）；`controller` 包自带 `ekf.yaml`（robot_localization，服务 T2.4）。driver 子树已原样收编本仓库 `third_party/hiwonder/`（见其 NOTICE.md）。
   - 验收：跨容器 `ros2 topic echo /odom_raw` 有数据；手柄遥控在 Jetson 链路上复现 T1.3。
 - **T2.4 EKF 与 TF 树**：`robot_localization`（EKF：`odom_raw`+`imu` → `/odom`），发布 `odom→base_footprint`；`rover_bringup` 静态 TF 放 `base_link→laser`（占位）。
   - 验收：rviz 中推车，激光点云与地面环境贴合无明显漂移；TF 2 小时无跳变。

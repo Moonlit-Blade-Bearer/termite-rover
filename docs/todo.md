@@ -19,9 +19,9 @@
 
 ## Phase 2：Jetson 大脑
 - [x] T2.1 ✅ L4T 检查完成（2026-11-12）：**R32.7.6 = JetPack 4.6.6（官方最新）→ 免刷机**；r32.7.1 容器可直接跑（同 32.7 线，CUDA 10.2 不变）。下一步 T2.2 起容器
-- [ ] T2.2 Docker + `dustynv/ros:humble-ros-base-l4t-r32.7.1` + compose.yaml（开机自启）
-- [ ] T2.3 幻尔驱动包容器内 colcon build，遥控链路复现
-- [ ] T2.4 robot_localization EKF（odom_raw+imu→odom）+ TF 树，rviz 检查贴合无漂移
+- [ ] T2.2 Docker + `dustynv/ros:humble-ros-base-l4t-r32.7.1` + compose.yaml（开机自启）——✅ 初验通过（2026-11-13）：镜像已拉、容器内 `ros2 topic list` 正常（/parameter_events /rosout）；ROS 为源码编译安装于 `/opt/ros/humble/install/`（bash 启动已自动 source）；剩 compose.yaml 开机自启 + 串口挂载
+- [ ] T2.3 幻尔驱动包容器内 colcon build，遥控链路复现（✅ 源码已锁定：官方 JetAcker 仓 commit 80639fd，driver 六包收编于 third_party/hiwonder/；RRC 板 = USB 串口 /dev/ttyACM0）
+- [ ] T2.4 robot_localization EKF（odom_raw+imu→odom）+ TF 树，rviz 检查贴合无漂移（官方 controller 包自带 ekf.yaml 可作起点）
 
 ## Phase 3：建图
 - [ ] T3.1 A1 驱动 → /scan 稳定 ≥ 8Hz
