@@ -13,7 +13,7 @@
 | --- | --- |
 | 状态维度不可观 | FAST-LIO2 估计 3D 位姿（x,y,z,roll,pitch,yaw）+ 速度 + IMU bias。A1 给出的所有点都在同一平面（z≈0），点对面配准只能约束 x/y/yaw，**z、roll、pitch 无有效观测**——地图退化成"一张纸"，z 轴由 IMU 二次积分主导，几秒就飘。 |
 | 去畸变依赖逐点时间戳 | FAST-LIO2 的高精度依赖每个激光点的 `time` 字段做运动补偿；A1 的 `LaserScan` 只有整帧时间戳，`scan→PointCloud2(z=0)` 转换即使能过编译也只是软件冒烟，不能当真建图。 |
-| 版本前提 | ROS2 移植版要求 Ubuntu ≥ 20.04、ROS ≥ Foxy、PCL ≥ 1.8、Eigen ≥ 3.3.4，并强制依赖 `livox_ros_driver2` 的消息类型；我们的容器是 **Ubuntu 18.04 用户态**（镜像自带 ROS2 Humble 源码编译环境，Python 3.6.9），存在版本错配风险——编译前必须先核 `g++ --version` / `cmake --version` / `dpkg -l | grep libpcl`。 |
+| 版本前提 | ROS2 移植版要求 Ubuntu ≥ 20.04、ROS ≥ Foxy、PCL ≥ 1.8、Eigen ≥ 3.3.4，并强制依赖 `livox_ros_driver2` 的消息类型；我们的容器是 **Ubuntu 18.04 用户态**（镜像自带 ROS2 Humble 源码编译环境，Python 3.6.9），存在版本错配风险。**2026-11-19 实测容器内版本**：g++ **7.5.0**（偏旧，但支持 `-std=c++17`，能否编译需实测）、cmake 3.27.9、Eigen 3.3.4（✅ 满足 ≥3.3.4）、**PCL 未安装**（apt 无 libpcl；bionic 源里 `libpcl-dev` 为 1.8.1，满足 ≥1.8，走路线 B 前需 `apt install libpcl-dev`）。 |
 
 > 一句话：**2D 雷达不是"低线数 3D 雷达"**，它是另一种传感器，应该配 2D SLAM 算法；把 LaserScan 硬转成点云是"类型骗过了编译器，物理量骗不过滤波器"。
 
@@ -46,7 +46,7 @@
    - `extrinsic_T` / `extrinsic_R` = 相机相对 IMU 的位姿（实测，别拍脑袋）；`extrinsic_est_en: false`；
    - `time_sync_en: false`（先尝试硬件/驱动层同步；没有再兜底开 true）；
    - `blind`、`filter_size_map`、`detect_effective_layer` 按室内场景调；先用 rosbag 离线跑，不要一上来实车。
-3. **编译环境**：先解决 §1 的版本错配——若容器内 GCC < 9 或 PCL 缺失，换 Ubuntu 20.04/22.04 基础镜像重建 ROS2 环境（L4T r32.7.6 内核 4.9 跑更新用户态容器需实测），或在容器内 apt 装新工具链（注意 ROS2 环境是源码编译的，别混 deb 包）。
+3. **编译环境（2026-11-19 实测）**：容器内 g++ 7.5.0（偏旧、支持 C++17 但需实测）、cmake 3.27.9、Eigen 3.3.4 ✅；**PCL 未装**——先 `apt update && apt install -y libpcl-dev`（bionic 提供 1.8.1，满足 ≥1.8）；若 GCC 7.5 编不过再考虑换更新基础镜像/工具链（L4T r32.7.6 内核 4.9 跑 22.04 用户态容器可行性待验证，注意别混 deb ROS 包破坏源码编译的 Humble）。
 4. **依赖**：即使不用 Livox 也要装 `livox_ros_driver2` 并 source（CMake 层依赖）；或改 CMake 去掉该依赖。
 5. **闭环验收**：静态场景点云地图无漂移、z 轴稳定（水平地面 z 变化 < 几 cm）；慢速绕圈回环闭合；再上 Nav2。
 
