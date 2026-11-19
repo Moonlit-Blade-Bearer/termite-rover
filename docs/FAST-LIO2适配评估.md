@@ -60,7 +60,23 @@
 - **M10 实验（可选）**：若那时 K230 已上车且有点云输出，按路线 B 做 FAST-LIO2 实验分支，成败以 rosbag 回放结果为准；
 - **触发升级**：路线 B 实测失败或需要真 3D 地图时，再评估路线 C 采购。
 
-## 5. 关联文件
+## 5. 实机编译尝试记录（2026-11-19，Jetson Nano B01）
+
+按依赖顺序把所有缺失包源码补齐（ROS2 Humble 源码编译环境**没有**这些 deb 包，只能源码编译）：
+
+| 包 | 来源 | 备注 |
+| --- | --- | --- |
+| `libpcl-dev` 1.8.1 | Ubuntu bionic apt | ROS apt 源签名过期 → `apt-get install -y --allow-unauthenticated libpcl-dev`；下载约 10 分钟 |
+| `pcl_msgs` | `ros-perception/pcl_msgs` 分支 `ros2`（commit `8a925a7`） | 第一轮编译报 `Findpcl_msgs.cmake` 缺失后补的 |
+| `pcl_conversions` / `pcl_ros` | `ros-perception/perception_pcl` 分支 `humble`（commit `67a5c2b`） | 第一轮报缺 `pcl_msgs` |
+| `livox_ros_driver2` | `Livox-SDK/livox_ros_driver2`（commit `2144554`） | 仓库无 `package.xml`（只有 ROS1/ROS2 两份），需 `cp package_ROS2.xml package.xml`；自带 `3rdparty/` SDK；FAST-LIO2 源码无条件 `#include <livox_ros_driver2/msg/custom_msg.hpp>`，绕不开 |
+| `fast_lio` | `Ericsii/FAST_LIO_ROS2` 分支 `ros2`（commit `2fffc57`） | 目标包 |
+
+命令：容器 `fastlio_build`（`-v ~/ros2_ws:/root/ros2_ws --net host --privileged`），`source /opt/ros/humble/install/setup.bash && cd /root/ros2_ws && colcon build --packages-up-to fast_lio`。
+
+状态：第一轮因缺 `pcl_msgs` 失败（已补），第二轮进行中；GCC 7.5 能否通过 C++17 编译待结果。本记录不涉及 M3 主线的改动。
+
+## 6. 关联文件
 
 - `third_party/FAST-LIO2/NOTICE.md`：官方 FAST-LIO2（ROS1，参考）
 - `third_party/FAST-LIO2-ROS2/NOTICE.md`：ROS2 移植版（可编译）
