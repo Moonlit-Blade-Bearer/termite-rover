@@ -69,12 +69,13 @@
 | `libpcl-dev` 1.8.1 | Ubuntu bionic apt | ROS apt 源签名过期 → `apt-get install -y --allow-unauthenticated libpcl-dev`；下载约 10 分钟 |
 | `pcl_msgs` | `ros-perception/pcl_msgs` 分支 `ros2`（commit `8a925a7`） | 第一轮编译报 `Findpcl_msgs.cmake` 缺失后补的 |
 | `pcl_conversions` / `pcl_ros` | `ros-perception/perception_pcl` 分支 `humble`（commit `67a5c2b`） | 第一轮报缺 `pcl_msgs` |
-| `livox_ros_driver2` | `Livox-SDK/livox_ros_driver2`（commit `2144554`） | 仓库无 `package.xml`（只有 ROS1/ROS2 两份），需 `cp package_ROS2.xml package.xml`；自带 `3rdparty/` SDK；FAST-LIO2 源码无条件 `#include <livox_ros_driver2/msg/custom_msg.hpp>`，绕不开 |
+| `livox_ros_driver2` | `Livox-SDK/livox_ros_driver2`（commit `2144554`） | 仓库无 `package.xml`（只有 ROS1/ROS2 两份），需 `cp package_ROS2.xml package.xml`；`3rdparty/` 只有 rapidjson，SDK 不在里面；FAST-LIO2 源码无条件 `#include <livox_ros_driver2/msg/custom_msg.hpp>`，绕不开 |
+| `Livox-SDK2` | `Livox-SDK/Livox-SDK2`（commit `c0796f0`） | 第二轮报找不到 `liblivox_lidar_sdk_shared.so` 后补；容器内 `cmake .. && make -j2 && make install && ldconfig`（root 身份免 sudo），另需 apt `libusb-1.0-0-dev` |
 | `fast_lio` | `Ericsii/FAST_LIO_ROS2` 分支 `ros2`（commit `2fffc57`） | 目标包 |
 
 命令：容器 `fastlio_build`（`-v ~/ros2_ws:/root/ros2_ws --net host --privileged`），`source /opt/ros/humble/install/setup.bash && cd /root/ros2_ws && colcon build --packages-up-to fast_lio`。
 
-状态：第一轮因缺 `pcl_msgs` 失败（已补），第二轮进行中；GCC 7.5 能否通过 C++17 编译待结果。本记录不涉及 M3 主线的改动。
+状态：第一轮因缺 `pcl_msgs` 失败（已补）；第二轮因缺 `Livox-SDK2` 的 `liblivox_lidar_sdk_shared.so` 失败（已补，SDK2 编译安装中）；第三轮进行中；GCC 7.5 能否通过 C++17 编译待结果。本记录不涉及 M3 主线的改动。
 
 ## 6. 关联文件
 
