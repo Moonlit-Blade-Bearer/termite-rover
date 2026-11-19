@@ -75,7 +75,7 @@
 
 命令：容器 `fastlio_build`（`-v ~/ros2_ws:/root/ros2_ws --net host --privileged`），`source /opt/ros/humble/install/setup.bash && cd /root/ros2_ws && colcon build --packages-up-to fast_lio`。
 
-状态：第一轮缺 `pcl_msgs`、第二轮缺 `Livox-SDK2`、第三轮 `livox_ros_driver2` 的 `LIVOX_INTERFACES_INCLUDE_DIRECTORIES`=NOTFOUND——**根因是它 CMakeLists.txt 里 `DISTRO_ROS` 从未赋值**，导致永远走旧分支；解决办法是 colcon 传参 `--cmake-args -DDISTRO_ROS=humble`（不改源码），必要时加 `--cmake-clean-cache`。第四轮进行中；GCC 7.5 能否通过 C++17 编译待结果。本记录不涉及 M3 主线的改动。
+状态：第一轮缺 `pcl_msgs`、第二轮缺 `Livox-SDK2`、第三轮 `livox_ros_driver2` 的 `LIVOX_INTERFACES_INCLUDE_DIRECTORIES`=NOTFOUND——**根因是它 CMakeLists.txt 里 `DISTRO_ROS` 从未赋值**，导致永远走旧分支；解决办法是 colcon 传参 `--cmake-args -DDISTRO_ROS=humble`（不改源码），必要时加 `--cmake-clean-cache`。第四轮 `DISTRO_ROS=humble` 后 CMake 通过，但 C++ 报 `CustomMsg`/`PointCloud` 未定义——**真正的首个错误是 `-D  -DBUILDING_ROS2` 里混入一个空的 `-D`**（来自 `add_definitions(${PCL_DEFINITIONS})` 在 PCL 1.8 + CMake 3.27 下产生坏定义），导致后续类型连锁失败；解法：在板上把 `livox_ros_driver2/CMakeLists.txt` 中两处 `add_definitions(${PCL_DEFINITIONS})` 注释掉后重建。第五轮进行中；GCC 7.5 能否通过 C++17 编译待结果。本记录不涉及 M3 主线的改动。
 
 ## 6. 关联文件
 
