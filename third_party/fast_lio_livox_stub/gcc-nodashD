@@ -5,4 +5,4 @@ for a in "$@"; do
     args+=("$a")
   fi
 done
-exec /usr/bin/gcc "${args[@]}"
+exec /usr/bin/gcc -I/usr/include/python3.6m "${args[@]}"
