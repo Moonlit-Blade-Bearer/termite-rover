@@ -15,3 +15,19 @@ colcon build --packages-up-to fast_lio --cmake-args -DDISTRO_ROS=humble --cmake-
 ```
 
 运行阶段：FAST-LIO2 会订阅 Livox CustomMsg 话题（本项目无数据，不影响）；实际输入走通用 PointCloud2 路径（`lidar_type=4`）。
+
+## 附：gxx-nodashD / gcc-nodashD
+
+Jetson 容器的源码编译 Humble + ament 依赖导出会把一个**空 `-D`**（`-D` 后面没有宏名）塞进所有 C/C++ 编译命令行，GCC 直接报 `macro names must be identifiers`，连锁导致 `PointCloud`/`CustomMsg` 等类型全部未定义。本目录的两个包装脚本在执行真编译器前过滤掉孤立的 `-D`：
+
+```bash
+# 容器内一次性安装
+docker cp gxx-nodashD fastlio_build:/usr/local/bin/gxx-nodashD
+docker cp gcc-nodashD fastlio_build:/usr/local/bin/gcc-nodashD
+docker exec fastlio_build chmod +x /usr/local/bin/g*-nodashD
+
+# colcon 编译时指定
+colcon build --packages-up-to fast_lio \
+  --cmake-args -DCMAKE_CXX_COMPILER=/usr/local/bin/gxx-nodashD -DCMAKE_C_COMPILER=/usr/local/bin/gcc-nodashD \
+  --cmake-clean-cache
+```

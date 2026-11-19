@@ -1,0 +1,9 @@
+#!/bin/bash
+# Filter stray empty -D injected by ament/PCL1.8 definition exports on this source-built Humble.
+args=()
+for a in "$@"; do
+  if [ "$a" != "-D" ]; then
+    args+=("$a")
+  fi
+done
+exec /usr/bin/g++ "${args[@]}"
