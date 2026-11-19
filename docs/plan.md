@@ -106,6 +106,7 @@ termite-rover/                      # 建议放入 GitHub org: Moonlit-Blade-Bea
   - 验收：rviz 中推车，激光点云与地面环境贴合无明显漂移；TF 2 小时无跳变。
 
 ### M3 固定场地建图（1 周）【修正：遥控绕场建图】
+> **2026-11-19 补充**：FAST-LIO2 源码已收编（`third_party/FAST-LIO2/` 官方 ROS1 版 + `third_party/FAST-LIO2-ROS2/` ROS2 Humble 移植版），但 **RPLIDAR A1 是 2D 雷达，不能直接喂 FAST-LIO2**（3D 点云 + IMU 为前提）。M3 主线维持下面的 slam_toolbox 2D 建图不动；FAST-LIO2 走 M10 实验分支（K230 深度造点云）或未来 3D 雷达升级，完整评估见 `docs/FAST-LIO2适配评估.md`。
 - **T3.1 A1 驱动**：`rplidar_ros`（ros2 分支）或 `sllidar_ros2`；注意 A1 供电（独立 5V，USB 口电流要足）；`/scan` 帧率 ≥ 8Hz。
   - 验收：rviz 雷达点云清晰、无跳点；`ros2 topic hz /scan` 稳定。
 - **T3.2 slam_toolbox 建图包**：`ros-humble-slam-toolbox`，`online_async` 模式，写 `rover_bringup/mapping.launch.py`。

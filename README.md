@@ -21,6 +21,7 @@
 | [docs/todo.md](docs/todo.md) | 可勾选执行清单（Phase 0–12） |
 | [docs/盘点清单.md](docs/盘点清单.md) | 硬件盘点结论 + 采购清单 |
 | [docs/白蚁数据集审计报告.md](docs/白蚁数据集审计报告.md) | 747 会话数据集的全量审计（采集质量 / 标签一致性 / 配对能量检验 / 问题清单） |
+| [docs/FAST-LIO2适配评估.md](docs/FAST-LIO2适配评估.md) | FAST-LIO2 源码收编说明 + 2D 雷达限制与三条适配路线（2D SLAM / K230 点云 / 3D 雷达升级） |
 | [docs/无人车白蚁探测系统-技术栈与硬件架构.md](docs/无人车白蚁探测系统-技术栈与硬件架构.md) | 原始架构文档（路线图的依据） |
 | [docs/原始需求笔记.txt](docs/原始需求笔记.txt) | 项目最初需求记录 |
 | [tools/](tools/) | 数据集审计与配对信号检验脚本（audit_baiyi / npz_full_check / pair_energy2 等） |
