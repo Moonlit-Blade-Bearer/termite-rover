@@ -75,7 +75,7 @@
 
 命令：容器 `fastlio_build`（`-v ~/ros2_ws:/root/ros2_ws --net host --privileged`），`source /opt/ros/humble/install/setup.bash && cd /root/ros2_ws && colcon build --packages-up-to fast_lio`。
 
-状态：第一轮因缺 `pcl_msgs` 失败（已补）；第二轮因缺 `Livox-SDK2` 的 `liblivox_lidar_sdk_shared.so` 失败（已补，SDK2 编译安装中）；第三轮进行中；GCC 7.5 能否通过 C++17 编译待结果。本记录不涉及 M3 主线的改动。
+状态：第一轮缺 `pcl_msgs`、第二轮缺 `Livox-SDK2`、第三轮 `livox_ros_driver2` 的 `LIVOX_INTERFACES_INCLUDE_DIRECTORIES`=NOTFOUND——**根因是它 CMakeLists.txt 里 `DISTRO_ROS` 从未赋值**，导致永远走旧分支；解决办法是 colcon 传参 `--cmake-args -DDISTRO_ROS=humble`（不改源码），必要时加 `--cmake-clean-cache`。第四轮进行中；GCC 7.5 能否通过 C++17 编译待结果。本记录不涉及 M3 主线的改动。
 
 ## 6. 关联文件
 
