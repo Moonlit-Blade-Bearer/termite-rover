@@ -6,6 +6,9 @@
 --main.zip
 数据集抽样.txt
 
+# FAST-LIO 演示素材（doc/ 约 128MB GIF/PDF），本地保留不入库
+third_party/FAST-LIO/doc/
+
 # Python
 __pycache__/
 *.pyc
