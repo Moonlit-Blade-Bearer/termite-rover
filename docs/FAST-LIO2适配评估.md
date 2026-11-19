@@ -75,7 +75,7 @@
 
 命令：容器 `fastlio_build`（`-v ~/ros2_ws:/root/ros2_ws --net host --privileged`），`source /opt/ros/humble/install/setup.bash && cd /root/ros2_ws && colcon build --packages-up-to fast_lio`。
 
-状态：第一轮缺 `pcl_msgs`、第二轮缺 `Livox-SDK2`、第三轮 `LIVOX_INTERFACES_INCLUDE_DIRECTORIES`=NOTFOUND（`DISTRO_ROS` 未赋值）、第四轮 `PCL_DEFINITIONS` 导出空 `-D` 导致连锁编译失败、第五轮注释掉 `add_definitions(${PCL_DEFINITIONS})` 仍失败（空 `-D` 来自依赖导出）、第六轮 colcon 检测到同名重复包（真驱动已移出 ws）……**改用消息桩包** `third_party/fast_lio_livox_stub/` 替代真驱动（我们无 Livox 硬件），第十轮定位到 fast_lio 的 Python 绑定失败根因：生成的 C 文件里 `C_INCLUDES` 含 **`-I/usr/include/python2.7`**——CMake 3.27 下 `FindPythonLibs` 找错版本，用 Python 2.7 头文件编 Python 3 绑定（`Py_hash_t` 未知）。解法：colcon 传 `-DPYTHON_EXECUTABLE=/usr/bin/python3 -DPYTHON_INCLUDE_DIR=/usr/include/python3.6m -DPYTHON_LIBRARY=/usr/lib/aarch64-linux-gnu/libpython3.6m.so`，并用编译器包装器过滤空 `-D`。第七～九轮已完成 pcl_msgs / pcl_conversions / pcl_ros / 桩包的编译；只剩 fast_lio 本体。本记录不涉及 M3 主线的改动。
+状态：第一轮缺 `pcl_msgs`、第二轮缺 `Livox-SDK2`、第三轮 `LIVOX_INTERFACES_INCLUDE_DIRECTORIES`=NOTFOUND（`DISTRO_ROS` 未赋值）、第四轮 `PCL_DEFINITIONS` 导出空 `-D` 导致连锁编译失败、第五轮注释掉 `add_definitions(${PCL_DEFINITIONS})` 仍失败（空 `-D` 来自依赖导出）、第六轮 colcon 检测到同名重复包（真驱动已移出 ws）……**改用消息桩包** `third_party/fast_lio_livox_stub/` 替代真驱动（我们无 Livox 硬件），第十轮显式指定 PYTHON_* 变量仍未解决；继续定位发现 `-I/usr/include/python2.7` 来自 **VTK 6.3**（PCL visualization 组件经 `pcl_ros` 被 find_package 全量解析后污染了 CMake 缓存里的 PCL_INCLUDE_DIRS），且它排在 python3.6m 之前。解法：在 CMAKE_C_FLAGS/CMAKE_CXX_FLAGS 里前置 `-I/usr/include/python3.6m`，让正确头文件优先。第七～九轮已完成 pcl_msgs / pcl_conversions / pcl_ros / 桩包的编译；只剩 fast_lio 本体。本记录不涉及 M3 主线的改动。
 
 ## 6. 关联文件
 
