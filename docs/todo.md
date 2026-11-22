@@ -20,7 +20,11 @@
 ## Phase 2：Jetson 大脑
 - [x] T2.1 ✅ L4T 检查完成（2026-11-12）：**R32.7.6 = JetPack 4.6.6（官方最新）→ 免刷机**；r32.7.1 容器可直接跑（同 32.7 线，CUDA 10.2 不变）。下一步 T2.2 起容器
 - [ ] T2.2 Docker + `dustynv/ros:humble-ros-base-l4t-r32.7.1` + compose.yaml（开机自启）——✅ 初验通过（2026-11-13）：镜像已拉、容器内 `ros2 topic list` 正常（/parameter_events /rosout）；ROS 为源码编译安装于 `/opt/ros/humble/install/`（bash 启动已自动 source）；剩 compose.yaml 开机自启 + 串口挂载
-- [ ] T2.3 幻尔驱动包容器内 colcon build，遥控链路复现——✅ 编译完成（2026-11-17）：官方 JetAcker 仓 commit 80639fd 六包在 `dustynv/ros:humble-ros-base-l4t-r32.7.1` 容器内 colcon build 全过（1min44s，纯警告），`ros2 pkg list` 识别正常；udev 规则 `/dev/rrc` 已装板上（99-rrc.rules，SYMLINK ttyACM0→rrc，MODE 0777）。**剩：RRC 板 USB 接入 Jetson 后的运行时验收**（/odom_raw 30–50Hz）
+- [ ] T2.3 幻尔驱动包容器内 colcon build，遥控链路复现——✅ 编译完成（2026-11-17）：官方 JetAcker 仓 commit 80639fd 六包在 `dustynv/ros:humble-ros-base-l4t-r32.7.1` 容器内 colcon build 全过（1min44s，纯警告），`ros2 pkg list` 识别正常；udev 规则 `/dev/rrc` 已装板上（99-rrc.rules，SYMLINK ttyACM0→rrc，MODE 0777）。
+  - 🔴 **卡点（2026-11-22）：插错 USB 口**。RRC-M4 板有两个独立 USB 串口（各自一颗 CH9102F）：
+    - **USB 串口 1 / UART1**（Type-C，115200）= 烧录 + 调试口。当前接的就是它 → 只能收到固件 `LOG_DEBUG` 文本（`Start...` / `position:-23131` / `duration:23631`，每次开串口复位后打印一次），1M 下全是误码（`00/f8/80`）。
+    - **USB 串口 2 / UART3**（1000000）= RRC 协议口，官方 `ros_robot_controller` 驱动要的就是它（`Board(device="/dev/rrc", baudrate=1000000)`）。官方 FAQ 明确建议「通信走串口 2，串口 1 留给烧录」。
+  - **待办**：把 Jetson 的 USB 线改插到板上的 USB 串口 2（UART3），跑 `bash /tmp/probe_rrc_host.sh` 应能看到 `aa55_frames > 0`；若板上该口只有排针，则需补一颗 USB-TTL（CH340/CP2102）接 UART3 TX/RX/GND。
 - [ ] T2.4 robot_localization EKF（odom_raw+imu→odom）+ TF 树，rviz 检查贴合无漂移（官方 controller 包自带 ekf.yaml 可作起点）
 
 ## Phase 3：建图
