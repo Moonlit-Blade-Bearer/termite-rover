@@ -160,3 +160,36 @@ ST-Link 接线（20pin → 板子 SWD 排针）：
 4. FlyMcu 在 RDP 解除循环时没有超时退出机制，不如 OpenOCD 可控。
 5. `privileged: true` 的 Docker 容器只在启动时快照 `/dev`，热插串口必须 `-v /dev:/dev`。
 6. 交叉验证很重要：OpenOCD 说成功但 st-flash 读回不一致 → 才发现缓存假象。
+
+---
+
+## 8. 补充发现（`G:\学习\百度网盘\STM32机器人控制器` 资料库，2026-11-23）
+
+这个资料库比 `大型阿克曼底盘` 更全，纠正了两个关键认知：
+
+### 8.1 板上原固件 = 总线舵机"示教"演示，不是 ROS 固件
+`3.RosRobot Controller程序分析\第8节 ...\RosRobotControllerM4_serial_servo_teach.hex`
+解码后同时含 `Start...` + `position:` + `duration:`，与板上原始打印完全吻合。
+→ 这块板出厂跑的是舵机示教 demo，**两个 USB 口本来就不实现 RRC 协议**。之前"插错口"的判断不全面。
+
+### 8.2 之前刷的 JETACKER 固件 IMU 上报被注释（刷错了）
+- `JETACKER.hex`（52,324B）：源码里 `packet_transmit(...PACKET_FUNC_IMU...)` 被注释 → 刷成功也不吐 IMU。
+- 正确 ROS 固件：`第15/16节 RRC与上位机通信烧录文件\RosRobotControllerM4_阿克曼_12V.hex`（65,536B），
+  含 `imu_task` / `IMU_data_ready`（IMU 上报激活）。已转存 `C:\Windows\Temp\opencode\Acker_12V.bin/.hex`。
+- 注意：该 hex 解码后头部不是标准向量表（app 可能不在 0x08000000 起始），直接用官方下载器更稳妥。
+
+### 8.3 官方下载器
+`附录\软件\USB串口下载\ATK-XISP\ATK-XISP.exe`（比 FlyMcu 可靠）；
+另有 `Flash Loader Demonstrator`、`串口助手 amaoComV4.9.exe`。
+
+### 8.4 仍无法恢复的原因
+- SWD 死（chipid=0x000），无法用 ST-Link 重刷/验证。
+- UART bootloader 进不去（DTR/RTS 各序列 SYNC 偶发 OK 但 GET 无响应）→ 芯片跑应用固件、不接受引导命令。
+- 综合判断：RRC 协议口（UART3）很可能在 **4 针「USB串口2」排针**上（TTL 电平），两个 Type-C 都不是它；
+  且 SWD/bootloader 均失效，软件路径穷尽。
+
+### 8.5 结论与可选硬件方案（更新）
+1. **换整块 RRC-M4 板（¥49）**：最省事，出厂固件可用，直接做 T2.3 验收。⭐推荐
+2. **换 STM32F407VET6 芯片（¥8–15）**：需焊接；换上后刷 `Acker_12V` 固件。
+3. **买 USB-TTL（CH340/CP2102，¥5–10）接「USB串口2」排针**：若芯片其实还在跑、UART3 在排针上，可绕开 SWD 直接用；
+   但若 RDP2 锁死则无效。可先买它做最低成本验证。
