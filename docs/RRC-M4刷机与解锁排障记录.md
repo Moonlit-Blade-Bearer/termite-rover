@@ -1,7 +1,8 @@
 # RRC-M4 控制板刷机与解锁排障记录
 
 > 记录时间：2026-11-22 ~ 2026-11-23
-> 结论：软件层面已穷尽，T2.3 运行时验收被硬件故障 BLOCKED，需换板/换芯片。
+> 最终结论：**板子已救活，T2.3 运行时验收通过，无需换硬件**（见第 9 节）。
+> 中途曾误判为 RDP2 锁死/需换板，实为「固件自锁 RDP + 白色 ST-Link 个体故障」叠加，已澄清。
 
 ---
 
@@ -199,3 +200,41 @@ ST-Link 接线（20pin → 板子 SWD 排针）：
 2. **换 STM32F407VET6 芯片（¥8–15）**：需焊接；换上后刷 `Acker_12V` 固件。
 3. **买 USB-TTL（CH340/CP2102，¥5–10）接「USB串口2」排针**：若芯片其实还在跑、UART3 在排针上，可绕开 SWD 直接用；
    但若 RDP2 锁死则无效。可先买它做最低成本验证。
+
+---
+
+## 9. 最终救活成功（2026-11-23 晚）—— 无需换硬件
+
+### 9.1 澄清两个误判
+- **不是 RDP2 永久锁死**：U盘式 clone ST-Link 能读 chipid=0x413，芯片是活的。白色原装 ST-Link 失联是**个体故障**。
+- **不是 UART3 在排针**：UART3 就在第二颗 CH9102（`...3600`）的 Type-C 上。之前静默是因为固件不对/自锁 RDP。
+
+### 9.2 真正的根因
+刷入的 `JETACKER.hex` ① IMU 上报被注释、② **启动时重新打开 RDP**。导致每次上电后 SWD 又被锁、擦除报 "device protected"。
+
+### 9.3 救活命令（关键：保持 halt，不让旧固件运行）
+```powershell
+& "C:\Windows\Temp\opencode\openocd\bin\openocd.exe" `
+  -s "C:\Windows\Temp\opencode\openocd\share\openocd\scripts" `
+  -f interface/stlink-v2.cfg -f target/stm32f407ve_custom.cfg `
+  -c "init" -c "halt" `
+  -c "stm32f4x unlock 0" `
+  -c "stm32f4x mass_erase 0" `
+  -c "flash write_image C:/Windows/Temp/opencode/Acker_12V.hex" `
+  -c "exit"
+# 输出: unlocked / mass erase complete / wrote 109024 bytes
+# 再独立会话: -c "verify_image ...Acker_12V.hex"  → verified 109024 bytes
+# 最后: -c "reset run"
+```
+要点：**unlock 后不要 `reset halt`/断电**（那会让旧固件跑起来重新上锁），直接在 halt 态 mass_erase+write。
+
+### 9.4 验收结果（Jetson，`...3600` 口，1M）
+- 波特率扫描 1M 下 `aa55=42`（RRC 帧，`AA 55 07 18`=IMU）
+- `/ros_robot_controller/imu_raw` ≈19.5Hz；`battery` ≈0.95Hz
+- `controller odom_publisher`（calibrate_params.yaml）→ **`/odom_raw` ≈42Hz（达标 30–50Hz）**
+- **T2.3 完成**。下一步 T2.4 EKF。
+
+### 9.5 经验更新
+- 固件自锁 RDP 时，重刷必须「halt 态一气呵成」，任何 reset/断电都会让旧固件重新上锁。
+- 多备一个调试器很有用：白色原装坏了，clone 救了全场。
+- 刷 ROS 固件要选 IMU 上报激活的版本（`阿克曼_12V`），不是 `JETACKER`（IMU 被注释）。

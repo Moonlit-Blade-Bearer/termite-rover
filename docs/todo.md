@@ -20,13 +20,16 @@
 ## Phase 2：Jetson 大脑
 - [x] T2.1 ✅ L4T 检查完成（2026-11-12）：**R32.7.6 = JetPack 4.6.6（官方最新）→ 免刷机**；r32.7.1 容器可直接跑（同 32.7 线，CUDA 10.2 不变）。下一步 T2.2 起容器
 - [ ] T2.2 Docker + `dustynv/ros:humble-ros-base-l4t-r32.7.1` + compose.yaml（开机自启）——✅ 初验通过（2026-11-13）：镜像已拉、容器内 `ros2 topic list` 正常（/parameter_events /rosout）；ROS 为源码编译安装于 `/opt/ros/humble/install/`（bash 启动已自动 source）；剩 compose.yaml 开机自启 + 串口挂载
-- [ ] T2.3 幻尔驱动包容器内 colcon build，遥控链路复现——✅ 编译完成（2026-11-17）：官方 JetAcker 仓 commit 80639fd 六包在 `dustynv/ros:humble-ros-base-l4t-r32.7.1` 容器内 colcon build 全过（1min44s，纯警告），`ros2 pkg list` 识别正常；udev 规则 `/dev/rrc` 已装板上（99-rrc.rules，SYMLINK ttyACM0→rrc，MODE 0777）。
+- [x] T2.3 幻尔驱动包容器内 colcon build，遥控链路复现——✅ 编译完成（2026-11-17）：官方 JetAcker 仓 commit 80639fd 六包在 `dustynv/ros:humble-ros-base-l4t-r32.7.1` 容器内 colcon build 全过（1min44s，纯警告），`ros2 pkg list` 识别正常；udev 规则 `/dev/rrc` 已装板上（99-rrc.rules，SYMLINK ttyACM0→rrc，MODE 0777）。
   - 🔴 **卡点（2026-11-22）：插错 USB 口**。RRC-M4 板有两个独立 USB 串口（各自一颗 CH9102F）：
     - **USB 串口 1 / UART1**（Type-C，115200）= 烧录 + 调试口。当前接的就是它 → 只能收到固件 `LOG_DEBUG` 文本（`Start...` / `position:-23131` / `duration:23631`，每次开串口复位后打印一次），1M 下全是误码（`00/f8/80`）。
     - **USB 串口 2 / UART3**（1000000）= RRC 协议口，官方 `ros_robot_controller` 驱动要的就是它（`Board(device="/dev/rrc", baudrate=1000000)`）。官方 FAQ 明确建议「通信走串口 2，串口 1 留给烧录」。
-  - 🔴 **升级为硬件故障（2026-11-23）**：换口无效（两个 CH9102 `...3614` / `...3600` 在全部波特率 9600–2M 下均 0 字节，发 RRC 蜂鸣器帧也无响应）。确认板上固件非官方 JetAcker 版（打印 `position:`/`duration:`，资料盘两个 hex 都无此字符串），于是用 ST-Link + OpenOCD 刷入官方 `RosRobotControllerM4_JETACKER.hex`：**已写入并独立会话校验通过**（52,324 bytes，向量表 `38 7f 01 20`）。但刷完后两个 USB 口依旧静默、蜂鸣器无响应，且 **SWD 彻底失联（chipid=0x000，st-info / OpenOCD 均无法连接）**，疑似选项字节写入触发 RDP Level 2 永久锁定（不可逆）或芯片损坏。
-  - **当前结论**：T2.3 运行时验收 **BLOCKED，需换硬件**（优先换 RRC-M4 控制板 ¥49；或换 STM32F407VET6 芯片）。完整踩坑与工具链见《RRC-M4刷机与解锁排障记录.md》。
-  - **换板后快速恢复**：见排障文档"换板后 10 分钟恢复流程"章节（工具链脚本都在 `C:\Windows\Temp\opencode\`，需重新 scp）。
+  - ✅ **运行时验收通过（2026-11-23 晚，板子已救活，无需换硬件）**：
+    - 根因链：① 板上原固件是"总线舵机示教"demo（非 ROS）；② 首刷的 `JETACKER.hex` IMU 上报被注释且**启动时自锁 RDP**，导致刷后静默+SWD 失联；③ 白色原装 ST-Link 个体故障，换 **U盘式 clone（带 RST 脚）** 后 SWD 恢复。
+    - 救活关键：用 clone + OpenOCD（`stm32f407ve_custom.cfg` 强制 512KiB），**保持 halt 不让旧固件运行**，`unlock 0 → mass_erase → flash write_image Acker_12V.hex` 一气呵成，独立会话 `verify_image` 通过（109,024 bytes）。
+    - 正确固件 = `RosRobotControllerM4_阿克曼_12V.hex`（IMU 上报激活）。协议口 = CH9102 `...3600`（UART3，1M）。
+    - 实测：`/ros_robot_controller/imu_raw` ≈19.5Hz、`battery` ≈0.95Hz、**`/odom_raw` ≈42Hz（达标 30–50Hz）**。
+    - 完整踩坑/工具链/救活命令见《RRC-M4刷机与解锁排障记录.md》。
 - [ ] T2.4 robot_localization EKF（odom_raw+imu→odom）+ TF 树，rviz 检查贴合无漂移（官方 controller 包自带 ekf.yaml 可作起点）
 
 ## Phase 3：建图
