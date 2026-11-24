@@ -1,0 +1,43 @@
+# T2.4 局部 EKF 融合：轮式里程计 (/odom_raw) + 板载 IMU (/ros_robot_controller/imu_raw)
+# 适配幻尔 JetAcker / RRC-M4（2026-11-24）
+/**:
+  ros__parameters:
+    use_sim_time: false
+    frequency: 30.0
+    sensor_timeout: 0.5
+    two_d_mode: true                  # 地面车：忽略 z/roll/pitch
+    transform_time_offset: 0.0
+    transform_timeout: 0.2
+    print_diagnostics: false
+    debug: false
+    publish_tf: true                  # EKF 发布 odom -> base_footprint
+    publish_acceleration: false
+
+    map_frame: map                    # 本阶段无 map 发布者，仅占位
+    odom_frame: odom
+    base_link_frame: base_footprint   # 与 odom_raw.child_frame_id 一致
+    world_frame: odom                 # 局部融合，世界系 = odom
+
+    # 轮式里程计：取 x/y/yaw 位姿 + vx/vyaw 速度
+    # 顺序: x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az
+    odom0: odom_raw
+    odom0_config: [true,  true,  false,
+                   false, false, true,
+                   true,  true,  false,
+                   false, false, true,
+                   false, false, false]
+    odom0_queue_size: 5
+    odom0_differential: false
+    odom0_relative: false
+
+    # IMU：只用角速度 z（yaw rate）辅助校正航向；板上 orientation 全 0 不用
+    imu0: /ros_robot_controller/imu_raw
+    imu0_config: [false, false, false,
+                  false, false, false,
+                  false, false, false,
+                  false, false, true,
+                  false, false, false]
+    imu0_queue_size: 5
+    imu0_differential: false
+    imu0_relative: false
+    imu0_remove_gravitational_acceleration: true
