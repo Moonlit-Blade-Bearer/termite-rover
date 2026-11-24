@@ -14,7 +14,7 @@ class StaticTf(Node):
         qos = QoSProfile(depth=10, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
         self.pub = self.create_publisher(TFMessage, '/tf_static', qos)
         self.msg = TFMessage()
-        for parent, child in [('base_footprint', 'base_link'), ('base_link', 'imu_link')]:
+        for parent, child in [('base_footprint', 'base_link'), ('base_link', 'imu_link'), ('base_link', 'laser')]:
             t = TransformStamped()
             t.header.frame_id = parent
             t.child_frame_id = child
