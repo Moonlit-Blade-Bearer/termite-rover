@@ -6,22 +6,17 @@ source /opt/ros/humble/install/setup.bash
 source /root/ros2_ws/install/setup.bash
 export ROS_DOMAIN_ID=42
 
-# 静态 TF：base_footprint -> base_link（odom_publisher 的 TF 被注释，需补齐）
-pkill -f 'static_transform_publisher' 2>/dev/null || true
-nohup ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 base_footprint base_link \
-  > /tmp/tf_base.log 2>&1 &
-sleep 1
-# IMU 坐标系挂到车上（imu_raw.frame_id = imu_link）
-nohup ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 base_link imu_link \
-  > /tmp/tf_imu.log 2>&1 &
-sleep 1
+# 静态 TF（持续发布 + 锁存，Humble 自带 static_transform_publisher 只发一次）
+pkill -f 'static_tf_pub.py' 2>/dev/null || true
+nohup python3 /root/ros2_ws/config/static_tf_pub.py > /tmp/tf_static.log 2>&1 &
+sleep 2
 
 # EKF：/odom_raw + /ros_robot_controller/imu_raw -> /odom + TF odom->base_footprint
 pkill -f 'ekf_node' 2>/dev/null || true
 CONFIG=/root/ros2_ws/src/config/ekf_local.yaml
 [ -f "$CONFIG" ] || CONFIG=/root/ros2_ws/config/ekf_local.yaml
 nohup ros2 run robot_localization ekf_node --ros-args --params-file "$CONFIG" \
-  > /tmp/ekf.log 2>&1 &
+  -r /odometry/filtered:=/odom > /tmp/ekf.log 2>&1 &
 sleep 5
 echo "=== EKF 日志 ==="
 head -30 /tmp/ekf.log
