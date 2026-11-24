@@ -37,9 +37,9 @@
   - 经验：Jetson Nano 编译大 C++ 文件必须加 swap + `-DCMAKE_CXX_FLAGS_RELEASE=-O0`（`-O1` 会被 Release 的 `-O3` 覆盖）；测试代码用 `-DBUILD_TESTING=OFF` 跳过；Humble 的 `static_transform_publisher` 只发一次，后启动监听者收不到，改用 `config/static_tf_pub.py` 持续锁存发布。
 
 ## Phase 3：建图
-- [ ] T3.1 A1 驱动 → /scan 稳定 ≥ 8Hz
-- [ ] T3.2 slam_toolbox online_async + mapping.launch.py
-- [ ] T3.3 遥控低速绕场建图 ×3 次一致性达标 → map_saver 入库 maps/
+- [x] T3.1 A1 驱动 → /scan 稳定输出（2026-11-25）：`rplidar_ros`(ros2 分支) 编译通过，`/dev/serial/by-id/...CP2102...` 稳定口，health OK、固件 1.27，Standard/Express 均 **≈6.7Hz**（A1 在 2kHz 采样下硬件上限，**未达原定 ≥8Hz 指标**，但足以建图；若必须 ≥8Hz 需换雷达或降采样角度数）。
+- [x] T3.2 slam_toolbox online_async + mapping.launch.py（2026-11-25）：源码编译成功（humble 分支，裁掉 RViz 插件依赖；补 `interactive_markers`；修 TBB CMake、rclcpp client.hpp GCC7 转换构造、头文件双层目录）。`/map` 已发布（83×69 栅格），TF 树 `map→odom→base_footprint→base_link→{imu_link,laser}` 完整。启动脚本 `config/start_slam.sh`。
+- [ ] T3.3 遥控低速绕场建图 ×3 次一致性达标 → map_saver 入库 maps/（待现场操作：车动起来后地图才会扩展）
 - [ ] T3.4 建图全程录包
 
 ### Checkpoint B（核心：自主导航闭环）
