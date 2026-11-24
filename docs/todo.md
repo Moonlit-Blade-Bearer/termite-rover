@@ -31,6 +31,9 @@
     - 实测：`/ros_robot_controller/imu_raw` ≈19.5Hz、`battery` ≈0.95Hz、**`/odom_raw` ≈42Hz（达标 30–50Hz）**。
     - 完整踩坑/工具链/救活命令见《RRC-M4刷机与解锁排障记录.md》。
 - [ ] T2.4 robot_localization EKF（odom_raw+imu→odom）+ TF 树，rviz 检查贴合无漂移（官方 controller 包自带 ekf.yaml 可作起点）
+  - ✅ **编译通过（2026-11-25）**：`robot_localization`（humble-devel 3.5.5）+ `geographic_msgs` + `diagnostic_updater` + `angles` 源码编译成功。踩坑：① Jetson Nano 内存不足，`ros_filter.cpp` 编译被 OOM kill → 加 3GB swap + `CMAKE_CXX_FLAGS_RELEASE=-O0`（注意 `-O1` 会被 Release 的 `-O3` 覆盖）；② 测试代码与容器 rclcpp API 不兼容 → `-DBUILD_TESTING=OFF`。
+  - ✅ **运行时验收（部分）**：EKF 输出 `/odom` ≈30Hz，TF 链 `odom→base_footprint→base_link→imu_link` 完整（Humble 自带 `static_transform_publisher` 只发一次，改用持续发布的 `config/static_tf_pub.py`）。
+  - ⏳ **待补**：板子 USB 数据线未接 Jetson（`/dev/rrc` 不存在）→ IMU 未接入融合；接回后验收 IMU 参与融合的 `/odom` 稳定性，再进 rviz 看贴合。配置与启动脚本见 `config/`。
 
 ## Phase 3：建图
 - [ ] T3.1 A1 驱动 → /scan 稳定 ≥ 8Hz
