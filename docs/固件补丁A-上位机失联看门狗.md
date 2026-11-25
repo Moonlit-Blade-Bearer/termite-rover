@@ -84,16 +84,37 @@ UV4.exe -b firmware\rrc-m4-src\MDK-ARM\RosRobotControllerM4.uvprojx -j0 -o build
 
 ## 回滚固件
 
-工程输出目录里自带厂商出厂 hex（2025-03-11），按底盘选：
+**板上原固件已完整备份**：`firmware/backup/rrc_m4_stock_20261126.bin`（512KB，`*.bin` 已在 `.gitignore` 中，仅本地保留）。
+
+> 实测对比：备份与工程自带的 `RosRobotControllerM4_阿克曼_12V.hex` **并非同一版本**（93% 字节不同），所以厂商 hex 只能当"能用"的兜底，精确回滚要用上面的 bin。
+
+回滚命令（pyocd）：
+
+```powershell
+pyocd cmd -t stm32f407vetx -c "savemem 0x08000000 0x80000 backup.bin"   # 备份
+pyocd flash -t stm32f407vetx backup.bin                                   # 还原
+```
+
+工程输出目录里另有厂商出厂 hex（2025-03-11），按底盘选：
 
 | 文件 | 用途 |
 | --- | --- |
-| `RosRobotControllerM4_阿克曼_12V.hex` | **本车（JetAcker 阿克曼 12V）** |
+| `RosRobotControllerM4_阿克曼_12V.hex` | 本车（JetAcker 阿克曼 12V） |
 | `RosRobotControllerM4_差速_8V.hex` | 差速底盘 |
 | `RosRobotControllerM4_麦轮_12V.hex` | 麦轮底盘 |
 | `RosRobotControllerM4_大/小履带_*.hex` | 履带底盘 |
 
-烧录失败或行为异常时，直接烧 `RosRobotControllerM4_阿克曼_12V.hex` 即可回到出厂状态。
+## 烧录记录（2026-11-26）
+
+| 项 | 内容 |
+| --- | --- |
+| 工具 | `pyocd 0.34.3` + ST-Link（`VID_0483 PID_3748`），目标 `stm32f407vetx` |
+| 芯片 | DBGMCU ID `0x101F6413`（STM32F407），Flash 512KB |
+| 烧录 | 擦除 128KB（5 sectors），写入 117760 字节 |
+| 校验 | 回读 116904 字节，**0 差异** |
+| 备份 | `firmware/backup/rrc_m4_stock_20261126.bin`（524288 字节） |
+
+> 第16节工程默认把 IMU 上报注释掉了（`imu_porting.c:131`）。已一并开启（补丁 B0，+8 字节代码），否则烧完 `/ros_robot_controller/imu_raw` 会消失、EKF 失效。
 
 ## 烧录（两种，任选其一）
 

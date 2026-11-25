@@ -20,6 +20,17 @@
 | 补丁 | 内容 | 文档 |
 | --- | --- | --- |
 | `0001-host-link-watchdog.patch` | 上位机 500ms 无合法帧 → 停电机 | `docs/固件补丁A-上位机失联看门狗.md` |
+| `0002-enable-imu-report.patch` | 第16节工程默认注释了 IMU 上报，开启它（上位机 EKF 依赖） | 同上 |
+
+## 备份
+
+`backup/rrc_m4_stock_20261126.bin`：烧录前从板上读出的 512KB 原始固件（`*.bin` 不入库，仅本地保留）。
+
+回滚：
+
+```powershell
+pyocd flash -t stm32f407vetx firmware/backup/rrc_m4_stock_20261126.bin
+```
 
 ## 重建源码目录
 

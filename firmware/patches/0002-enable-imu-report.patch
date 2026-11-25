@@ -1,0 +1,14 @@
+diff --git a/Hiwonder/Portings/imu_porting.c b/Hiwonder/Portings/imu_porting.c
+index 81d0254..fedfc4c 100644
+--- a/Hiwonder/Portings/imu_porting.c
++++ b/Hiwonder/Portings/imu_porting.c
+@@ -128,7 +128,8 @@ void imu_task_entry(void *argument)
+ 			
+ 		//获取Roll、Pitch、重力加速度值请放开下2行注释(第2行注释语句需要配合树莓派等上位机运行搭配ros开发功能包使用) 
+         //printf("%d,%d,%d\r\n",(int)report.array.accel_array[0],(int)report.array.accel_array[1],(int)report.array.accel_array[2]);
+-        //packet_transmit(&packet_controller, PACKET_FUNC_IMU, &report, sizeof(PacketReportIMU_Raw_TypeDef));
++        /* 补丁B0：开启 IMU 原始数据上报（第16节例程默认注释掉；上位机 EKF 依赖此话题） */
++        packet_transmit(&packet_controller, PACKET_FUNC_IMU, &report, sizeof(PacketReportIMU_Raw_TypeDef));
+         osDelay(50);
+     }
+ }
