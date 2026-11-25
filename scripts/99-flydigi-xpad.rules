@@ -1,0 +1,3 @@
+# 飞智八爪鱼5 接收器热插拔时自动绑定 xpad，生成 /dev/input/jsX
+# udev 运行环境不允许直接写 sysfs，所以只负责拉起 systemd 服务，由服务去写。
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="37d7", ATTR{idProduct}=="2501", TAG+="systemd", ENV{SYSTEMD_WANTS}+="termite-xpad.service"

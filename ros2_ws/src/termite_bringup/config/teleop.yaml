@@ -1,0 +1,37 @@
+# 手柄遥控参数
+#
+# 两套输入源，切换 launch 的 source 参数即可：
+#   source:=js     手柄接收器插 Jetson USB 口 -> linux_joy 读 /dev/input/js0
+#   source:=board  手柄接收器插 RRC-M4 USB HOST 口 -> 固件上报 /ros_robot_controller/joy
+#
+# 首次使用务必先跑：
+#   ros2 topic echo <joy 话题> --once
+# 推动摇杆，确认哪个轴在动，再改 axis_linear / axis_angular 的编号。
+
+linux_joy:
+  ros__parameters:
+    device: /dev/input/js0
+    num_axes: 8
+    num_buttons: 16
+    publish_rate: 50.0
+    topic: joy
+
+joy_teleop:
+  ros__parameters:
+    joy_topic: /joy
+    cmd_vel_topic: /cmd_vel
+    # 实测（飞智八爪鱼5，XInput 接收器，xpad 驱动）：
+    #   axis0=左摇杆X  axis1=左摇杆Y(上=-1)  axis3=右摇杆X(右=+1)  axis4=右摇杆Y(上=-1)
+    #   axis2/5=LT/RT（松开=-1，按到底=+1）  axis6/7=十字键
+    axis_linear: 1
+    axis_angular: 3
+    # 死手开关：-1 表示不需要按键，按住才动的安全性更好（按键编号待测）
+    enable_button: -1
+    # 上推 = -1，需要取反成前进；右推 = +1，ROS 正角速度是左转，也要取反
+    invert_linear: true
+    invert_angular: true
+    # 限速：底盘 odom_publisher 还会再限 0.2 m/s / 0.5 rad/s
+    scale_linear: 0.15
+    scale_angular: 0.4
+    deadzone: 0.08
+    timeout: 0.5

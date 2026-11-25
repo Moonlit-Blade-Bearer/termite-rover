@@ -24,6 +24,8 @@ setup(
     entry_points={
         'console_scripts': [
             'static_tf_pub = termite_bringup.static_tf:main',
+            'linux_joy = termite_bringup.linux_joy:main',
+            'joy_teleop = termite_bringup.joy_teleop:main',
         ],
     },
 )

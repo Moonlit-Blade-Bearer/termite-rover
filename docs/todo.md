@@ -38,6 +38,8 @@
   - 经验：Jetson Nano 编译大 C++ 文件必须加 swap + `-DCMAKE_CXX_FLAGS_RELEASE=-O0`（`-O1` 会被 Release 的 `-O3` 覆盖）；测试代码用 `-DBUILD_TESTING=OFF` 跳过；Humble 的 `static_transform_publisher` 只发一次，后启动监听者收不到，改用 `config/static_tf_pub.py` 持续锁存发布。
 
 ## Phase 3：建图
+- [x] T3.0 手柄遥控链路（2026-11-25）：飞智八爪鱼5 + 2.4G 接收器插 **Jetson** USB 口。内核 xpad 是内置驱动但白名单缺飞智 `37d7:2501`，接口 0（ff/5d/01 = XInput）无人接管 → 用 `new_id` 绑定，已做持久化（`termite-xpad.service` + `99-flydigi-xpad.rules`，热插拔自动生效）。容器内无 `joy` 包，自写 `linux_joy`（读 `/dev/input/jsX` → `/joy`，50Hz）与 `joy_teleop`（`/joy` → `/cmd_vel`，死区 0.08、限速 ±0.15 m/s / ±0.4 rad/s、0.5s 超时归零、可配死手键）。实测 8 轴 11 键：axis1=左摇杆Y（上推=-1）、axis3=右摇杆X（右推=+1），四方向合成消息验证通过（前 +0.15 / 后 -0.15 / 右 -0.4 / 左 +0.4）。启动：`ros2 launch termite_bringup teleop.launch.py source:=js`。
+  - 注意：**控制板固件不认该接收器**——插 RRC-M4 的 USB HOST 口时 IMU 正常但 `/ros_robot_controller/joy` 完全无数据（固件只解析幻尔自家手柄报文），故走 Jetson 路线。
 - [x] T3.1 A1 驱动 → /scan 稳定输出（2026-11-25）：`rplidar_ros`(ros2 分支) 编译通过，`/dev/serial/by-id/...CP2102...` 稳定口，health OK、固件 1.27，Standard/Express 均 **≈6.7Hz**（A1 在 2kHz 采样下硬件上限，**未达原定 ≥8Hz 指标**，但足以建图；若必须 ≥8Hz 需换雷达或降采样角度数）。
 - [x] T3.2 slam_toolbox online_async + mapping.launch.py（2026-11-25）：源码编译成功（humble 分支，裁掉 RViz 插件依赖；补 `interactive_markers`；修 TBB CMake、rclcpp client.hpp GCC7 转换构造、头文件双层目录）。`/map` 已发布（83×69 栅格），TF 树 `map→odom→base_footprint→base_link→{imu_link,laser}` 完整。启动入口：`ros2 launch termite_bringup mapping.launch.py`。
 - [ ] T3.3 遥控低速绕场建图 ×3 次一致性达标 → map_saver 入库 maps/（待现场操作：车动起来后地图才会扩展）

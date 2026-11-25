@@ -15,7 +15,7 @@ ssh -o BatchMode=yes $Jetson 'mkdir -p ~/termite-rover/docker ~/termite-rover/sc
 $dockerFiles = Get-ChildItem "$Repo\docker" -File | Where-Object { $_.Name -in @('entrypoint.sh', 'fixes.sh', 'compose.yaml', 'Dockerfile') }
 scp -o BatchMode=yes $dockerFiles.FullName "${Jetson}:~/termite-rover/docker/"
 
-$scriptFiles = Get-ChildItem "$Repo\scripts" -File | Where-Object { $_.Extension -in @('.sh', '.service', '.timer') }
+$scriptFiles = Get-ChildItem "$Repo\scripts" -File | Where-Object { $_.Extension -in @('.sh', '.service', '.timer', '.rules') }
 scp -o BatchMode=yes $scriptFiles.FullName "${Jetson}:~/termite-rover/scripts/"
 
 $wheels = Get-ChildItem "$Repo\.cache" -Filter '*.whl' -File -ErrorAction SilentlyContinue

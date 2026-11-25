@@ -1,0 +1,12 @@
+[Unit]
+Description=Bind Flydigi APEX5 (37d7:2501) XInput interface to xpad
+# Jetson 内核的 xpad 是内置驱动，白名单里没有飞智 VID/PID，
+# 需要手动把 ID 写进 new_id，XInput 接口(ff/5d/01)才会被接管并生成 /dev/input/jsX。
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'if [ -e /sys/bus/usb/drivers/xpad/new_id ]; then echo 37d7 2501 > /sys/bus/usb/drivers/xpad/new_id || true; fi'
+
+[Install]
+WantedBy=multi-user.target
