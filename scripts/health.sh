@@ -13,7 +13,7 @@ echo "=== 节点 ==="
 docker exec "$C" bash -lc "$ROS && timeout 10 ros2 node list" || echo "（取不到节点列表）"
 
 echo "=== 话题频率（各 6s）==="
-for t in /scan /odom /ros_robot_controller/imu_raw; do
+for t in /scan /odom_raw /ros_robot_controller/imu_raw; do
   printf '%-32s ' "$t"
   docker exec "$C" bash -lc "$ROS && timeout -s INT 6 ros2 topic hz $t 2>/dev/null | grep -m1 average" || echo "无数据"
 done

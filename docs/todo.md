@@ -104,7 +104,8 @@
 
 ## Phase 12：收官
 - [ ] T12.1 全链自启 + watchdog + 断电恢复测试
-  - ✅ **自启 + 看门狗（2026-11-25）**：统一启动包 `ros2_ws/src/termite_bringup`（`robot.launch.py` / `mapping.launch.py`，全部节点 `respawn=True`）；容器 entrypoint 自动起栈；宿主 `termite-watchdog.timer` 每 2 分钟查容器与 `/odom`，`/dev/rrc` 未接时跳过。实测：容器重建后 entrypoint 自动起栈、雷达崩溃 2s 自动重启、看门狗正确跳过未接硬件。
+  - ✅ **自启 + 看门狗（2026-11-25）**：统一启动包 `ros2_ws/src/termite_bringup`（`robot.launch.py` / `mapping.launch.py`，全部节点 `respawn=True`）；容器 entrypoint 自动起栈；宿主 `termite-watchdog.timer` 每 2 分钟查容器与 `/odom_raw`，`/dev/rrc` 未接时跳过。实测：容器重建后 entrypoint 自动起栈、雷达崩溃 2s 自动重启、看门狗正确跳过未接硬件。
+  - ✅ **看门狗话题名修正（2026-11-26）**：原脚本查 `/odom`（该话题不存在，实际是 `/odom_raw`），硬件接上后每 6 分钟误重启容器一次；已改为 `/odom_raw` 并实测不再误触发。`health.sh` 同步修正。
   - ⏳ **待现场**：接回控制板 + 雷达后 `sudo reboot`，按 `docs/系统固化与运维.md` 第六节验收 /scan /odom /map /TF。
 - [ ] T12.2 30 分钟无人值守演示：巡检 → 白蚁探测 → 机械臂作业，成功率 ≥ 90%
 - [ ] T12.3 代码/文档提交 GitHub 公开仓库；博客同步 chaihonglei.com；接线表与故障对策归档
