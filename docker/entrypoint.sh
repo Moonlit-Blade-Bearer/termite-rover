@@ -10,6 +10,19 @@ export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-42}"
 
 bash /root/docker/fixes.sh
 
+# Jetson 无 RTC 电池：开机瞬间系统时间是 2000-01-01，NTP 要几十秒才校正。
+# 不校时直接起节点，rosbag / TF / 传感器时间戳全是错的，所以先等年份正常（最多 60s）。
+for _ in $(seq 1 60); do
+  year=$(date +%Y)
+  [ "$year" -ge 2025 ] && break
+  sleep 1
+done
+if [ "$(date +%Y)" -ge 2025 ]; then
+  echo "[entrypoint] 系统时间正常：$(date '+%F %T %Z')"
+else
+  echo "[entrypoint] 警告：60s 内未完成对时（当前 $(date '+%F %T')），继续启动"
+fi
+
 # 开机时 udev 可能还没建好 /dev/rrc 软链，最多等 30s
 for _ in $(seq 1 30); do
   [ -e /dev/rrc ] && break

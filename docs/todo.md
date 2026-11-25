@@ -87,7 +87,7 @@
 - [ ] T9.5 /termite/detection 上车融合
 
 ## Phase 10：对齐与融合
-- [ ] T10.1 统一时基（Jetson chrony 服务端）
+- [x] T10.1 统一时基（Jetson chrony 服务端）——✅ **2026-11-26 完成**：chrony 替换 timesyncd（Aliyun 主源，Stratum 3，偏差 15µs），`allow 192.168.0.0/24` 对全网段授时，UDP 123 已监听；`entrypoint.sh` 增加开机时间守卫（年份正常才起栈，最多等 60s）。踩坑记录：`maxupdateskew 100` 太严会退回本地时钟；`local stratum 10` 会阻止上游同步。详见 `docs/时间同步.md`。**剩余**：PC 实测慢 12.27s 待配置、Pi5/K230 上线时指向 Jetson。
 - [ ] T10.2 每条链路延迟标定表（误差 < 20ms）
 - [ ] T10.3 ApproximateTimeSynchronizer 融合：对齐帧 ≥ 95%，P95 < 10ms
 
@@ -103,14 +103,16 @@
 - [ ] 无 Pi5 状态下全功能稳定
 
 ## Phase 12：收官
-- [ ] T12.1 全链自启 + watchdog + 断电恢复测试
+- [x] T12.1 全链自启 + watchdog + 断电恢复测试
   - ✅ **自启 + 看门狗（2026-11-25）**：统一启动包 `ros2_ws/src/termite_bringup`（`robot.launch.py` / `mapping.launch.py`，全部节点 `respawn=True`）；容器 entrypoint 自动起栈；宿主 `termite-watchdog.timer` 每 2 分钟查容器与 `/odom_raw`，`/dev/rrc` 未接时跳过。实测：容器重建后 entrypoint 自动起栈、雷达崩溃 2s 自动重启、看门狗正确跳过未接硬件。
   - ✅ **看门狗话题名修正（2026-11-26）**：原脚本查 `/odom`（该话题不存在，实际是 `/odom_raw`），硬件接上后每 6 分钟误重启容器一次；已改为 `/odom_raw` 并实测不再误触发。`health.sh` 同步修正。
-  - ⏳ **待现场**：接回控制板 + 雷达后 `sudo reboot`，按 `docs/系统固化与运维.md` 第六节验收 /scan /odom /map /TF。
+  - ✅ **断电/重启恢复验收（2026-11-26）**：`sudo reboot` 后 20s SSH 恢复、约 60s 全栈就绪，`health.sh` 全绿：`/scan` 7.09Hz、`/odom_raw` 47Hz、IMU 19.5Hz、`/map` 85×67、`map→base_link` TF 通、容器 healthy；看门狗定时器 02:02 运行无日志（未误重启）；入口时间守卫打印「系统时间正常 2026-11-25 18:00:03 UTC」后才起栈。
 - [ ] T12.2 30 分钟无人值守演示：巡检 → 白蚁探测 → 机械臂作业，成功率 ≥ 90%
 - [ ] T12.3 代码/文档提交 GitHub 公开仓库；博客同步 chaihonglei.com；接线表与故障对策归档
-- [ ] T12.4 下位机固件补丁A：上位机失联 500ms 停电机（2026-11-26 代码完成，待烧录验收）
-  - 源码：`firmware/rrc-m4-src/`（厂商第16节工程，已打补丁；不入库），补丁：`firmware/patches/0001-host-link-watchdog.patch`
+- [ ] T12.4 下位机固件补丁A：上位机失联 500ms 停电机（2026-11-26 已烧录，待现场验收）
+  - 源码：`firmware/rrc-m4-src/`（厂商第16节工程，已打补丁；不入库），补丁：`firmware/patches/0001-host-link-watchdog.patch`、`0002-enable-imu-report.patch`
   - 文档：`docs/固件补丁A-上位机失联看门狗.md`
   - 依据：原厂 ROS 固件无通信超时保护；手柄直控+超时停车的代码在 ROS 版被整段注释
-  - 待办：Keil 编译 → 烧录（SWD 或串口 ISP）→ 架起车验证「拔 USB 线 ≤0.6s 停转、转向舵机不动、插回即恢复」
+  - ✅ 编译 + 烧录：Keil 0 Error，pyocd 烧写 117760 字节，回读 116904 字节 0 差异；原固件已备份 `firmware/backup/rrc_m4_stock_20261126.bin`
+  - ✅ 烧录后验证：IMU 19.7Hz、电池 12.36V、全栈健康
+  - ⏳ **待现场**（需轮子转动）：架起车 → 持续发速度 10s 不抖 → 停发指令 0.6s 内停转 → 重发可恢复
