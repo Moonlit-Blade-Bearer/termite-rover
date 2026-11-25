@@ -13,6 +13,9 @@ third_party/FAST-LIO2-ROS2/doc/
 # 部署用离线包（wheel 不入库）
 .cache/
 
+# RRC-M4 固件源码（约 128MB，重建方法见 firmware/README.md）
+firmware/rrc-m4-src/
+
 # Python
 __pycache__/
 *.pyc

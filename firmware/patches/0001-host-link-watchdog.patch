@@ -1,0 +1,89 @@
+diff --git a/Hiwonder/Misc/packet.c b/Hiwonder/Misc/packet.c
+index 5501d24..95cd9e0 100644
+--- a/Hiwonder/Misc/packet.c
++++ b/Hiwonder/Misc/packet.c
+@@ -5,6 +5,10 @@
+ #include "cmsis_os2.h"
+ #include "global.h"
+ #include "lwmem_porting.h"
++
++/* 最近一次收到上位机合法帧的时刻(ms)，见 packet.h 说明 */
++volatile uint32_t packet_last_host_rx_tick = 0;
++
+ /**
+     * @brief 串口命令回调注册
+     * @param self 协议实例
+@@ -70,6 +74,8 @@ void packet_recv(struct PacketController *self)
+                     self->frame.data_and_checksum[self->frame.data_length] = data[i];
+                     crc = checksum_crc8((uint8_t*)&self->frame.function, self->frame.data_length + 2);
+                     if(crc == self->frame.data_and_checksum[self->frame.data_length]) { /* 校验失败, 跳过执行 */
++                        /* 补丁A：合法帧到达，刷新上位机心跳时间戳（失联看门狗用） */
++                        packet_last_host_rx_tick = osKernelGetTickCount();
+                         if(NULL != self->handles[self->frame.function]) {
+ 							self->handles[self->frame.function](&self->frame);
+                         }
+diff --git a/Hiwonder/Misc/packet.h b/Hiwonder/Misc/packet.h
+index 73940bd..db20258 100644
+--- a/Hiwonder/Misc/packet.h
++++ b/Hiwonder/Misc/packet.h
+@@ -82,6 +82,15 @@ struct PacketController {
+ };
+ 
+ 
++/**
++ * @brief 最近一次收到上位机合法数据帧的时刻（osKernelGetTickCount，单位 ms）
++ * @note  由 packet_recv() 在 CRC 校验通过时刷新。
++ *        应用层（app.c）用它实现"上位机失联 → 停电机"的看门狗，
++ *        避免 Jetson 崩溃/串口线脱落时小车保持最后一次速度冲出去。
++ */
++extern volatile uint32_t packet_last_host_rx_tick;
++
++
+ /**
+  * @brief 串口命令回调注册
+  * @param self 协议实例
+diff --git a/Hiwonder/System/app.c b/Hiwonder/System/app.c
+index bac56d5..26d5425 100644
+--- a/Hiwonder/System/app.c
++++ b/Hiwonder/System/app.c
+@@ -22,6 +22,15 @@
+ #include "packet_handle.h"
+ #include "serial_servo.h"
+ 
++/* ===== 补丁A：上位机失联看门狗 =====
++ * 超过 HOST_LINK_TIMEOUT_MS 收不到上位机任意合法帧，就把 4 个电机的目标速度清零。
++ * 只清电机、不动舵机：云台/转向保持原位，避免突然打角。
++ * 正常情况下 Jetson 的 odom_publisher 会以 20~50Hz 持续下发 set_motor，
++ * 因此不会误触发；Jetson 崩溃、容器死掉或串口线脱落时才会触发。
++ */
++#define HOST_LINK_TIMEOUT_MS   500U
++#define HOST_LINK_CHECK_MS      20U
++
+ 
+ void buzzers_init(void);
+ void buttons_init(void);
+@@ -77,8 +86,23 @@ void app_task_entry(void *argument)
+     chassis_init();
+     set_chassis_type(CHASSIS_TYPE_JETACKER);
+ 
++    uint8_t motor_locked = 0;   /* 补丁A：是否已执行过失联停车 */
++
+     for(;;) {
+-		osDelay(10000);
++        /* 补丁A：上位机失联看门狗 */
++        if(packet_last_host_rx_tick != 0U) {
++            if((osKernelGetTickCount() - packet_last_host_rx_tick) > HOST_LINK_TIMEOUT_MS) {
++                if(!motor_locked) {
++                    for(int i = 0; i < 4; ++i) {
++                        motors[i]->pid_controller.set_point = 0.0f;
++                    }
++                    motor_locked = 1;
++                }
++            } else {
++                motor_locked = 0;
++            }
++        }
++        osDelay(HOST_LINK_CHECK_MS);
+     }
+ }
+ 
