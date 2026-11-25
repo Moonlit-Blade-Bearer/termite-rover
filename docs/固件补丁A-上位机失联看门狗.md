@@ -70,6 +70,31 @@ for(;;) {
 
 > 注意：资料里的 `RosRobotControllerM4.ioc` 可以重新生成代码，但厂商明确警告重新生成会覆盖/打乱他们的代码，**不要用 CubeMX 重新生成**。
 
+## 编译验证（2026-11-26）
+
+在本机 Keil MDK（`C:\Keil_v5`）命令行编译通过：
+
+```powershell
+UV4.exe -b firmware\rrc-m4-src\MDK-ARM\RosRobotControllerM4.uvprojx -j0 -o build.log
+```
+
+结果：`0 Error(s), 0 Warning(s)`，`Code=114000 RO-data=2816 RW-data=80 ZI-data=98384`。
+
+产物：`firmware/rrc-m4-src/MDK-ARM/RosRobotControllerM4/RosRobotControllerM4.hex`
+
+## 回滚固件
+
+工程输出目录里自带厂商出厂 hex（2025-03-11），按底盘选：
+
+| 文件 | 用途 |
+| --- | --- |
+| `RosRobotControllerM4_阿克曼_12V.hex` | **本车（JetAcker 阿克曼 12V）** |
+| `RosRobotControllerM4_差速_8V.hex` | 差速底盘 |
+| `RosRobotControllerM4_麦轮_12V.hex` | 麦轮底盘 |
+| `RosRobotControllerM4_大/小履带_*.hex` | 履带底盘 |
+
+烧录失败或行为异常时，直接烧 `RosRobotControllerM4_阿克曼_12V.hex` 即可回到出厂状态。
+
 ## 烧录（两种，任选其一）
 
 | 方式 | 需要 | 说明 |
