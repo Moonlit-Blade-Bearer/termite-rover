@@ -1,0 +1,10 @@
+[Unit]
+Description=每 2 分钟运行一次 termite-rover 看门狗
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2min
+Unit=termite-watchdog.service
+
+[Install]
+WantedBy=timers.target

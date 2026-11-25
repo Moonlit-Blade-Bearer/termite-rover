@@ -19,7 +19,8 @@
 
 ## Phase 2：Jetson 大脑
 - [x] T2.1 ✅ L4T 检查完成（2026-11-12）：**R32.7.6 = JetPack 4.6.6（官方最新）→ 免刷机**；r32.7.1 容器可直接跑（同 32.7 线，CUDA 10.2 不变）。下一步 T2.2 起容器
-- [ ] T2.2 Docker + `dustynv/ros:humble-ros-base-l4t-r32.7.1` + compose.yaml（开机自启）——✅ 初验通过（2026-11-13）：镜像已拉、容器内 `ros2 topic list` 正常（/parameter_events /rosout）；ROS 为源码编译安装于 `/opt/ros/humble/install/`（bash 启动已自动 source）；剩 compose.yaml 开机自启 + 串口挂载
+- [x] T2.2 Docker + `dustynv/ros:humble-ros-base-l4t-r32.7.1` + compose.yaml（开机自启）——✅ 初验通过（2026-11-13）：镜像已拉、容器内 `ros2 topic list` 正常（/parameter_events /rosout）；ROS 为源码编译安装于 `/opt/ros/humble/install/`（bash 启动已自动 source）。
+  - ✅ **完成（2026-11-25）**：派生镜像 `termite-ros:humble-l4t-r32.7.1`（`docker/Dockerfile`）补齐 libgeographic17 / boost / TBB / ceres / pyserial；容器 `restart: unless-stopped` + `entrypoint.sh` 开机直接起建图栈；串口 `/dev` 全挂 + udev `/dev/rrc` 可见。详见 `docs/系统固化与运维.md`。
 - [x] T2.3 幻尔驱动包容器内 colcon build，遥控链路复现——✅ 编译完成（2026-11-17）：官方 JetAcker 仓 commit 80639fd 六包在 `dustynv/ros:humble-ros-base-l4t-r32.7.1` 容器内 colcon build 全过（1min44s，纯警告），`ros2 pkg list` 识别正常；udev 规则 `/dev/rrc` 已装板上（99-rrc.rules，SYMLINK ttyACM0→rrc，MODE 0777）。
   - 🔴 **卡点（2026-11-22）：插错 USB 口**。RRC-M4 板有两个独立 USB 串口（各自一颗 CH9102F）：
     - **USB 串口 1 / UART1**（Type-C，115200）= 烧录 + 调试口。当前接的就是它 → 只能收到固件 `LOG_DEBUG` 文本（`Start...` / `position:-23131` / `duration:23631`，每次开串口复位后打印一次），1M 下全是误码（`00/f8/80`）。
@@ -38,7 +39,7 @@
 
 ## Phase 3：建图
 - [x] T3.1 A1 驱动 → /scan 稳定输出（2026-11-25）：`rplidar_ros`(ros2 分支) 编译通过，`/dev/serial/by-id/...CP2102...` 稳定口，health OK、固件 1.27，Standard/Express 均 **≈6.7Hz**（A1 在 2kHz 采样下硬件上限，**未达原定 ≥8Hz 指标**，但足以建图；若必须 ≥8Hz 需换雷达或降采样角度数）。
-- [x] T3.2 slam_toolbox online_async + mapping.launch.py（2026-11-25）：源码编译成功（humble 分支，裁掉 RViz 插件依赖；补 `interactive_markers`；修 TBB CMake、rclcpp client.hpp GCC7 转换构造、头文件双层目录）。`/map` 已发布（83×69 栅格），TF 树 `map→odom→base_footprint→base_link→{imu_link,laser}` 完整。启动脚本 `config/start_slam.sh`。
+- [x] T3.2 slam_toolbox online_async + mapping.launch.py（2026-11-25）：源码编译成功（humble 分支，裁掉 RViz 插件依赖；补 `interactive_markers`；修 TBB CMake、rclcpp client.hpp GCC7 转换构造、头文件双层目录）。`/map` 已发布（83×69 栅格），TF 树 `map→odom→base_footprint→base_link→{imu_link,laser}` 完整。启动入口：`ros2 launch termite_bringup mapping.launch.py`。
 - [ ] T3.3 遥控低速绕场建图 ×3 次一致性达标 → map_saver 入库 maps/（待现场操作：车动起来后地图才会扩展）
 - [ ] T3.4 建图全程录包
 
@@ -101,5 +102,7 @@
 
 ## Phase 12：收官
 - [ ] T12.1 全链自启 + watchdog + 断电恢复测试
+  - ✅ **自启 + 看门狗（2026-11-25）**：统一启动包 `ros2_ws/src/termite_bringup`（`robot.launch.py` / `mapping.launch.py`，全部节点 `respawn=True`）；容器 entrypoint 自动起栈；宿主 `termite-watchdog.timer` 每 2 分钟查容器与 `/odom`，`/dev/rrc` 未接时跳过。实测：容器重建后 entrypoint 自动起栈、雷达崩溃 2s 自动重启、看门狗正确跳过未接硬件。
+  - ⏳ **待现场**：接回控制板 + 雷达后 `sudo reboot`，按 `docs/系统固化与运维.md` 第六节验收 /scan /odom /map /TF。
 - [ ] T12.2 30 分钟无人值守演示：巡检 → 白蚁探测 → 机械臂作业，成功率 ≥ 90%
 - [ ] T12.3 代码/文档提交 GitHub 公开仓库；博客同步 chaihonglei.com；接线表与故障对策归档

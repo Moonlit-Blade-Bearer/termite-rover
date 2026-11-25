@@ -1,9 +1,12 @@
 # termite-rover 主控容器（Jetson Nano，宿主 L4T r32.7.6 / JetPack 4.6.6）
 # 用法：docker compose -f docker/compose.yaml up -d
 # 宿主 /etc/docker/daemon.json 已设 default-runtime=nvidia 与国内加速源
+#
+# 自启：restart: unless-stopped —— 宿主开机 Docker 自动拉起容器，
+#       容器内 entrypoint.sh 直接启动建图栈（补齐补丁 → 等 /dev/rrc → launch）。
 services:
   ros2:
-    image: dustynv/ros:humble-ros-base-l4t-r32.7.1
+    image: termite-ros:humble-l4t-r32.7.1   # docker/Dockerfile 构建（基础镜像 + 运行时依赖 + 补丁）
     container_name: termite_ros2
     network_mode: host            # DDS 跨机通信必需
     privileged: true              # 外设/GPIO/摄像头访问
@@ -14,7 +17,14 @@ services:
       # 直接挂宿主 /dev：容器启动后再插拔的串口也能用，且 udev 软链 /dev/rrc 原样可见
       # （privileged 只在启动时快照 /dev，热插设备进不来，也不能单独 bind 一个软链）
       - /dev:/dev
+      - /home/chl/termite-rover/docker:/root/docker:ro   # entrypoint / fixes 脚本
     working_dir: /root/ros2_ws
-    command: >
-      bash -c "source /opt/ros/humble/install/setup.bash && tail -f /dev/null"
+    command: ["/root/docker/entrypoint.sh"]
     restart: unless-stopped
+    # 进程级看护由 launch 的 respawn 负责；这里只兜"容器还在但 ROS 进程全死"的极端情况
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'ros2 launch termite_bringup' >/dev/null || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s

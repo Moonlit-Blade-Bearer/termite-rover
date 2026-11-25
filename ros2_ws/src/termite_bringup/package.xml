@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>termite_bringup</name>
+  <version>0.1.0</version>
+  <description>白蚁探测无人车统一启动包：底盘 + EKF + 雷达 + SLAM，全部节点带 respawn。</description>
+  <maintainer email="chl@termite-rover.local">chl</maintainer>
+  <license>Apache-2.0</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>tf2_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ros_robot_controller</exec_depend>
+  <exec_depend>controller</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
+  <exec_depend>rplidar_ros</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

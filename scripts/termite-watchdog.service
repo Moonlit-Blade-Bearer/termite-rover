@@ -1,0 +1,8 @@
+[Unit]
+Description=termite-rover 看门狗（容器存活 + /odom 心跳）
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/chl/termite-rover/scripts/watchdog.sh
