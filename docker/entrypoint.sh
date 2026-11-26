@@ -8,6 +8,10 @@ source /opt/ros/humble/install/setup.bash
 source /root/ros2_ws/install/setup.bash
 export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-42}"
 
+# 毫米波检测节点需要 torch：装在挂载卷 vendor/ 下，并借用宿主的 CUDA/cuDNN 库
+export LD_LIBRARY_PATH="/usr/local/cuda-10.2/lib64:/root/ros2_ws/vendor/torch_libs${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export PYTHONPATH="/root/ros2_ws/vendor/torch_pkgs${PYTHONPATH:+:$PYTHONPATH}"
+
 bash /root/docker/fixes.sh
 
 # Jetson 无 RTC 电池：开机瞬间系统时间是 2000-01-01，NTP 要几十秒才校正。

@@ -27,6 +27,7 @@ setup(
             'linux_joy = termite_bringup.linux_joy:main',
             'joy_teleop = termite_bringup.joy_teleop:main',
             'vision_receiver = termite_bringup.vision_receiver:main',
+            'termite_detector = termite_bringup.termite_detector:main',
         ],
     },
 )

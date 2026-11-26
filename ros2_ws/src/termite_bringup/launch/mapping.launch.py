@@ -70,4 +70,14 @@ def generate_launch_description():
             respawn=True,
             respawn_delay=3.0,
         ),
+        # 毫米波白蚁检测：配置雷达并每 1.28s 推理一次
+        Node(
+            package='termite_bringup',
+            executable='termite_detector',
+            name='termite_detector',
+            parameters=[{'configure_radar': True, 'stride': 128}],
+            output='screen',
+            respawn=True,
+            respawn_delay=3.0,
+        ),
     ])

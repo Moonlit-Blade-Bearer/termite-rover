@@ -18,6 +18,16 @@ services:
       # （privileged 只在启动时快照 /dev，热插设备进不来，也不能单独 bind 一个软链）
       - /dev:/dev
       - /home/chl/termite-rover/docker:/root/docker:ro   # entrypoint / fixes 脚本
+      # CUDA 运行时库：容器基础镜像只有 stub，torch 需要真实的 libcudart/cublas/curand 等
+      - /usr/local/cuda-10.2/targets/aarch64-linux/lib:/usr/local/cuda-10.2/targets/aarch64-linux/lib:ro
+      # cuDNN：容器里的 .so.8.2.1 是 0 字节占位，必须用宿主的真实库
+      - /usr/lib/aarch64-linux-gnu/libcudnn.so.8.2.1:/usr/lib/aarch64-linux-gnu/libcudnn.so.8.2.1:ro
+      - /usr/lib/aarch64-linux-gnu/libcudnn_adv_infer.so.8.2.1:/usr/lib/aarch64-linux-gnu/libcudnn_adv_infer.so.8.2.1:ro
+      - /usr/lib/aarch64-linux-gnu/libcudnn_adv_train.so.8.2.1:/usr/lib/aarch64-linux-gnu/libcudnn_adv_train.so.8.2.1:ro
+      - /usr/lib/aarch64-linux-gnu/libcudnn_cnn_infer.so.8.2.1:/usr/lib/aarch64-linux-gnu/libcudnn_cnn_infer.so.8.2.1:ro
+      - /usr/lib/aarch64-linux-gnu/libcudnn_cnn_train.so.8.2.1:/usr/lib/aarch64-linux-gnu/libcudnn_cnn_train.so.8.2.1:ro
+      - /usr/lib/aarch64-linux-gnu/libcudnn_ops_infer.so.8.2.1:/usr/lib/aarch64-linux-gnu/libcudnn_ops_infer.so.8.2.1:ro
+      - /usr/lib/aarch64-linux-gnu/libcudnn_ops_train.so.8.2.1:/usr/lib/aarch64-linux-gnu/libcudnn_ops_train.so.8.2.1:ro
     working_dir: /root/ros2_ws
     command: ["/root/docker/entrypoint.sh"]
     restart: unless-stopped
