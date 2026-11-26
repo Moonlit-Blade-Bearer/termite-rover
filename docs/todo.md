@@ -52,8 +52,8 @@
 - [ ] T4.4 调参笔记 + bag 复现闭环
 
 ## Phase 5：视觉（可与 Phase4 并行）
-- [ ] T5.1 K230（CanMV）摄像头 + KPU YOLO demo
-- [ ] T5.2 帧协议（0x55AA|len|seq|json|crc16）+ Jetson 解析 → /detections；30min 丢帧 < 0.5%
+- [x] T5.1 K230（CanMV）摄像头 + KPU YOLO demo——✅ **2026-11-26 完成**：CanMV v1.5 / GC2093，无屏方案（`Display.VIRT` + chn0 绑层），YOLOv8n 320 实测 **19.3 FPS**，COCO person 连续检出。踩坑与做法见 `docs/K230视觉链路.md`。
+- [x] T5.2 帧协议（`$D,seq,json,crc16`）+ Jetson 解析 → `/detections`——✅ **2026-11-26 链路打通**：K230 约 9.4 帧/秒、Jetson 发布 `vision_msgs/Detection2DArray` @9.8Hz，CRC 零错误，person 0.877/0.883 正确归一化。**剩余**：30min 丢帧率 <0.5%、K230 开机自启方案。
 - [ ] T5.3 云台 2 轴 /gimbal_cmd 顺滑 + 限位保护
 - [ ] T5.4（可选）深度相机 + RTAB-Map
 
