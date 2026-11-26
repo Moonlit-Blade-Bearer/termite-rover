@@ -1,0 +1,5 @@
+# IWR6843AOPEVM（CP2105 双串口）：固定成 /dev/radar_cfg 与 /dev/radar_data
+# ttyUSB 编号会随插拔顺序漂移，而且雷达和 RPLIDAR 都是 10c4 厂商，必须按 PID + 接口号区分。
+# 接口 00（Enhanced）= CFG/CLI；接口 01（Standard）= 数据口（921600）
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea70", ENV{ID_USB_INTERFACE_NUM}=="00", SYMLINK+="radar_cfg", MODE="0666"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea70", ENV{ID_USB_INTERFACE_NUM}=="01", SYMLINK+="radar_data", MODE="0666"

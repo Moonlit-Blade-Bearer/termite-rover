@@ -53,7 +53,7 @@
 
 ## Phase 5：视觉（可与 Phase4 并行）
 - [x] T5.1 K230（CanMV）摄像头 + KPU YOLO demo——✅ **2026-11-26 完成**：CanMV v1.5 / GC2093，无屏方案（`Display.VIRT` + chn0 绑层），YOLOv8n 320 实测 **19.3 FPS**，COCO person 连续检出。踩坑与做法见 `docs/K230视觉链路.md`。
-- [x] T5.2 帧协议（`$D,seq,json,crc16`）+ Jetson 解析 → `/detections`——✅ **2026-11-26 链路打通**：K230 约 9.4 帧/秒、Jetson 发布 `vision_msgs/Detection2DArray` @9.8Hz，CRC 零错误，person 0.877/0.883 正确归一化。**剩余**：30min 丢帧率 <0.5%、K230 开机自启方案。
+- [x] T5.2 帧协议（`$D,seq,json,crc16`）+ Jetson 解析 → `/detections`——✅ **2026-11-26 链路打通并完成 30 分钟验收**：K230 约 9.4 帧/秒、Jetson 发布 `vision_msgs/Detection2DArray`；30 分钟实测 **16955 帧 / bad_crc=0 / bad_json=0，丢帧率 0.00%**（要求 <0.5%），`/detections` 稳定 8.9Hz。K230 已做开机自启（CRC 校验 main.py + 3600s 超时）。
 - [ ] T5.3 云台 2 轴 /gimbal_cmd 顺滑 + 限位保护
 - [ ] T5.4（可选）深度相机 + RTAB-Map
 
@@ -80,7 +80,7 @@
 
 ## Phase 9：白蚁探测（各小块应提前穿插启动）
 - [x] T9.0 选型定稿：IWR6843AOPEVM 已到手 + 白蚁来源 D4 已落实（DCA1000EVM：没有 → 暂缓补购，三轮预实验后决定）
-- [x] T9.1 采集链路 + 环境箱——✅ 用户已自建 44GB/747 会话数据集（2026-10-18 审计通过）；剩余：Jetson Linux 版 Python 接收器落盘
+- [x] T9.1 采集链路 + 环境箱——✅ 用户已自建 44GB/747 会话数据集（2026-10-18 审计通过）；✅ **Jetson 接收器（2026-11-26）**：`scripts/radar_receiver.py` 用数据集同款 cfg 启动 IWR6843，读 921600 数据口解析 384 字节帧（4 天线 × 20 bin Q/I），输出与数据集完全一致的 167 列 CSV + 原始流；实测 99.5–99.9 fps、0 坏块；串口固定为 `/dev/radar_cfg` / `/dev/radar_data`。详见 `docs/毫米波接收器.md`。
 - [ ] T9.2 信号链：SVD 去静杂波→特征→CNN 已有雏形（厚度回归 MAE 5.3mm/R²0.74）；剩余：STFT 微多普勒谱 + 分类任务解耦（用户 2026-11-09 决定暂缓）
 - [x] T9.3 对照实验数据积累——✅ 厚度/湿度/木种网格已铺满（缺格 5 处、深度真值未标、140 会话时钟失效，详见 docs/白蚁数据集审计报告.md）
 - [ ] T9.4 检测模型：规则版→轻量CNN；盲测 AUC ≥ 0.85，虚警 ≤ 10%（现有模型实为"板厚计"，白蚁分类指标待会话清洗后测）
