@@ -16,6 +16,9 @@ third_party/FAST-LIO2-ROS2/doc/
 # RRC-M4 固件源码（约 128MB，重建方法见 firmware/README.md）
 firmware/rrc-m4-src/
 
+# K230 整卡备份（约 380MB，含模型文件）
+firmware/k230-sd-backup/
+
 # Python
 __pycache__/
 *.pyc

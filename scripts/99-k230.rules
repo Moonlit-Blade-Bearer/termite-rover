@@ -1,0 +1,2 @@
+# K230 CanMV 的 USB CDC 串口：枚举顺序会变（ttyACM1/2/…），固定成 /dev/k230
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="abd1", SYMLINK+="k230", MODE="0666"
