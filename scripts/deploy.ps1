@@ -6,8 +6,13 @@ $ErrorActionPreference = 'Stop'
 $Jetson = 'chl@192.168.0.108'
 $Repo = Split-Path -Parent $PSScriptRoot
 
-Write-Host '[1/4] sync termite_bringup source'
-scp -r -o BatchMode=yes "$Repo\ros2_ws\src\termite_bringup" "${Jetson}:~/ros2_ws/src/"
+Write-Host '[1/4] sync ros2 packages'
+foreach ($pkg in @('termite_bringup', 'termite_interfaces')) {
+    $src = Join-Path $Repo "ros2_ws\src\$pkg"
+    if (Test-Path $src) {
+        scp -r -o BatchMode=yes $src "${Jetson}:~/ros2_ws/src/"
+    }
+}
 
 Write-Host '[2/4] sync docker / scripts / offline wheel'
 ssh -o BatchMode=yes $Jetson 'mkdir -p ~/termite-rover/docker ~/termite-rover/scripts ~/ros2_ws/vendor'

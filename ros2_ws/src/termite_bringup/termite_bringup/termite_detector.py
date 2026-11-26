@@ -23,7 +23,7 @@ import rclpy
 import serial
 import torch
 from rclpy.node import Node
-from std_msgs.msg import String
+from termite_interfaces.msg import TermiteDetection
 
 from termite_bringup.radar_iq import FrameAssembler, PacketStreamParser
 
@@ -46,7 +46,7 @@ class TermiteDetector(Node):
         self.declare_parameter('stride', 128)          # 每 128 帧（1.28s）推理一次
         self.declare_parameter('configure_radar', True)
 
-        self.pub = self.create_publisher(String, self.get_parameter('topic').value, 10)
+        self.pub = self.create_publisher(TermiteDetection, self.get_parameter('topic').value, 10)
         self.stride = int(self.get_parameter('stride').value)
 
         # ---- 模型 ----
@@ -83,14 +83,14 @@ class TermiteDetector(Node):
         cfg_file = self.get_parameter('cfg_file').value
         lines = [l.strip() for l in open(cfg_file)
                  if l.strip() and not l.strip().startswith('%')]
-        s = serial.Serial(self.get_parameter('cfg_port').value, 115200, timeout=1.0)
+        s = serial.Serial(self.get_parameter('cfg_port').value, 115200, timeout=0.25)
         time.sleep(0.3)
         s.write(b'\r')
         time.sleep(0.3)
         s.read(256)
         for line in lines:
             s.write((line + '\r').encode())
-            time.sleep(0.08)
+            time.sleep(0.05)
             resp = s.read(512).decode(errors='replace')
             if 'error' in resp.lower():
                 self.get_logger().warn('雷达配置报错：%s -> %s' % (line, resp.strip()[-60:]))
@@ -169,13 +169,19 @@ class TermiteDetector(Node):
                 self.windows_done += 1
                 self.last_window_time = time.time()
                 frames = self.frames
-            msg = String()
-            msg.data = json.dumps({
-                'depth_mm': round(float(depth), 2),
-                'valid': True,
-                'frames': frames,
-                'window': int(C.WINDOW_LEN),
-                'infer_ms': round(times['T_total'] * 1000, 1),
+            msg = TermiteDetection()
+            msg.header.stamp = self.get_clock().now().to_msg()
+            msg.header.frame_id = 'radar'
+            msg.valid = True
+            msg.detected = False          # 分类模型上线前固定 false
+            msg.confidence = 0.0
+            msg.depth_mm = float(depth)
+            msg.infer_ms = float(times['T_total'] * 1000.0)
+            msg.frames = int(C.WINDOW_LEN)
+            msg.source = 'mmwave'
+            msg.debug_json = json.dumps({
+                'total_frames': int(frames),
+                'windows_done': self.windows_done,
             })
             self.pub.publish(msg)
 
