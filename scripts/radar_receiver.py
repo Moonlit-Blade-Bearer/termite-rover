@@ -1,39 +1,32 @@
 #!/usr/bin/env python3
-"""IWR6843AOPEVM 接收器：配置雷达 → 读 921600 数据口 → 解析 384 字节帧 → CSV + 原始流。
+"""IWR6843AOPEVM 接收器：配置雷达 → 读 921600 → 解析 → CSV/原始流。
 
-帧结构（与数据集 raw_uart 一致，实测 100 帧/秒）：
-    384 字节 = magic(8) + 4 天线 × [ts(4) + 20 bin × (Q,I) int16]
-    天线记录间隔 96 字节；wire 是 Q 在前、I 在后，CSV 按数据集惯例写成 I,Q。
-
-CSV 列与数据集完全一致：
-    frame_id, host_time_ns, host_time_iso_utc, device_ts_a1..a4,
-    a1_b00_i, a1_b00_q, ..., a4_b19_q   （共 167 列）
+解析使用厂商原始采集工具的算法（`termite_bringup.radar_iq`）：
+    - 每个天线一个 magic（0x0708050603040101..0104）
+    - 包 = magic(8) + ts(4) + 20 bin × (Q,I) int16 = 92 字节
+    - 包间分隔符 "f\\r\\n"（另有 1 字节被丢弃）
+    - 4 个天线包组成一帧（天线 0 标记帧首）
+    - wire 是 Q,I；CSV 按数据集惯例写 I,Q
 
 用法：
     python3 radar_receiver.py --duration 30 --out-csv radar.csv --out-raw radar.bin
 """
 import argparse
+import csv
 import datetime
 import json
-import os
-import struct
-import sys
 import time
 
 import serial
 
-MAGIC = b'\x01\x01\x04\x03\x06\x05\x08\x07'
-BLOCK = 384
-N_ANT = 4
-N_BIN = 20
-REC = 96
+from termite_bringup.radar_iq import FrameAssembler, PacketStreamParser
 
-HEADER = ['frame_id', 'host_time_ns', 'host_time_iso_utc',
-          'device_ts_a1', 'device_ts_a2', 'device_ts_a3', 'device_ts_a4']
-for a in range(1, N_ANT + 1):
-    for b in range(N_BIN):
-        HEADER.append('a%d_b%02d_i' % (a, b))
-        HEADER.append('a%d_b%02d_q' % (a, b))
+CFG_HEADER = ['frame_id', 'host_time_ns', 'host_time_iso_utc',
+              'device_ts_a1', 'device_ts_a2', 'device_ts_a3', 'device_ts_a4']
+for _a in range(1, 5):
+    for _b in range(20):
+        CFG_HEADER.append('a%d_b%02d_i' % (_a, _b))
+        CFG_HEADER.append('a%d_b%02d_q' % (_a, _b))
 
 
 def configure(cfg_port, cfg_path):
@@ -49,33 +42,12 @@ def configure(cfg_port, cfg_path):
         s.write((line + '\r').encode())
         time.sleep(0.08)
         resp = s.read(512).decode(errors='replace')
-        if 'Error' in resp or 'error' in resp:
+        if 'error' in resp.lower():
             errors.append((line, resp.strip()[-80:]))
         if line == 'configDataPort 921600 1':
             time.sleep(0.3)
     s.close()
     return errors
-
-
-def parse_block(block):
-    """返回 (ts[4], iq[4][20][2] 按 (I,Q))；结构不符返回 None。"""
-    if len(block) != BLOCK or not block.startswith(MAGIC):
-        return None
-    ts = []
-    iq = []
-    for a in range(N_ANT):
-        off = 8 + a * REC
-        if off + 84 > len(block):
-            return None
-        ts.append(struct.unpack_from('<I', block, off)[0])
-        vals = struct.unpack_from('<40h', block, off + 4)
-        pairs = []
-        for b in range(N_BIN):
-            q = vals[2 * b]
-            i = vals[2 * b + 1]
-            pairs.append((i, q))
-        iq.append(pairs)
-    return ts, iq
 
 
 def main():
@@ -88,79 +60,69 @@ def main():
     ap.add_argument('--out-raw', default='')
     args = ap.parse_args()
 
-    errors = configure(args.cfg_port, args.cfg)
-    for line, err in errors:
+    for line, err in configure(args.cfg_port, args.cfg):
         print('CFG_ERR %s -> %s' % (line, err))
 
     data = serial.Serial(args.data_port, 921600, timeout=0.2)
     time.sleep(0.2)
     data.reset_input_buffer()
 
-    fcsv = open(args.out_csv, 'w', newline='')
-    fcsv.write(','.join(HEADER) + '\n')
     fraw = open(args.out_raw, 'wb') if args.out_raw else None
+    parser = PacketStreamParser(range_bins=20, raw_sink=fraw)
+    assembler = FrameAssembler(antenna_count=4, range_bins=20)
 
-    buf = bytearray()
+    fcsv = open(args.out_csv, 'w', newline='')
+    writer = csv.writer(fcsv, lineterminator='\n')
+    writer.writerow(CFG_HEADER)
+
     frames = 0
-    bad = 0
     t0 = time.time()
     next_report = t0 + 5
 
     while time.time() - t0 < args.duration:
-        buf += data.read(65536)
-        while True:
-            k = buf.find(MAGIC)
-            if k < 0:
-                # 保留尾部 7 字节，防止 magic 被截断
-                if len(buf) > 7:
-                    buf = buf[-7:]
-                break
-            if k > 0:
-                buf = buf[k:]
-            if len(buf) < BLOCK:
-                break
-            block = bytes(buf[:BLOCK])
-            parsed = parse_block(block)
-            if parsed is None:
-                buf = buf[1:]
-                bad += 1
+        chunk = data.read(65536)
+        if not chunk:
+            continue
+        for pkt in parser.feed(chunk):
+            frame = assembler.add(pkt)
+            if frame is None:
                 continue
-            buf = buf[BLOCK:]
-
-            ts, iq = parsed
-            now = time.time()
-            iso = datetime.datetime.fromtimestamp(now, datetime.timezone.utc).isoformat()
-            row = [str(frames), str(int(now * 1e9)), iso]
-            row.extend(str(t) for t in ts)
-            for a in range(N_ANT):
-                for b in range(N_BIN):
-                    i, q = iq[a][b]
-                    row.append(str(i))
-                    row.append(str(q))
-            fcsv.write(','.join(row) + '\n')
-            if fraw:
-                fraw.write(block)
+            iso = datetime.datetime.fromtimestamp(
+                frame.host_time_ns / 1e9, datetime.timezone.utc
+            ).isoformat(timespec='microseconds')
+            row = [frame.frame_id, frame.host_time_ns, iso]
+            row.extend(frame.device_timestamps)
+            row.extend(frame.iq.reshape(-1).astype(int).tolist())
+            writer.writerow(row)
             frames += 1
-
+        if frames and frames % 500 == 0:
+            fcsv.flush()
         if time.time() >= next_report:
             el = time.time() - t0
-            print('t=%.0fs frames=%d fps=%.1f bad=%d' % (el, frames, frames / el, bad))
+            print('t=%.0fs frames=%d fps=%.1f pkts=%d bad=%d' % (
+                el, frames, frames / el, parser.parsed_packets, assembler.out_of_order_packets))
             next_report += 5
 
-    elapsed = time.time() - t0
+    parser.finish()
+    assembler.finish()
     fcsv.close()
     if fraw:
         fraw.close()
     data.close()
+    elapsed = time.time() - t0
 
     summary = {
         'frames': frames,
         'elapsed_seconds': elapsed,
         'mean_frame_rate_hz': frames / elapsed if elapsed else 0,
-        'bad_blocks': bad,
+        'packets': parser.parsed_packets,
+        'transport_separator_bytes': parser.transport_separator_bytes,
+        'discarded_stream_bytes': parser.discarded_bytes,
+        'incomplete_frames': assembler.incomplete_frames,
+        'out_of_order_packets': assembler.out_of_order_packets,
+        'duplicate_packets': assembler.duplicate_packets,
         'csv': args.out_csv,
         'raw': args.out_raw or None,
-        'config': args.cfg,
         'finished_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
     with open(args.out_csv + '.summary.json', 'w') as f:
@@ -169,7 +131,4 @@ def main():
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        sys.exit(0)
+    main()
