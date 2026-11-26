@@ -16,6 +16,7 @@ import ujson
 KMODEL = '/sdcard/examples/kmodel/yolov8n_320.kmodel'
 W, H = 640, 360
 SEND_EVERY = 2          # 每 2 帧发一次（约 9~10 Hz）
+MAX_SEC = 3600          # 最大运行时长；到点自动退出回 REPL（0 = 永不退出）
 
 _txt = open('/sdcard/examples/05-AI-Demo/object_detect_yolov8n.py').read()
 LABELS = ['person']
@@ -68,6 +69,10 @@ try:
     t0 = time.ticks_ms()
     n = 0
     while True:
+        if MAX_SEC > 0 and time.ticks_diff(time.ticks_ms(), t0) > MAX_SEC * 1000:
+            print('$TIMEOUT', MAX_SEC)
+            break
+
         img = sensor.snapshot(chn=CAM_CHN_ID_2)
         res = yolo.run(img.to_numpy_ref())
         n += 1

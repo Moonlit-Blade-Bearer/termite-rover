@@ -60,4 +60,14 @@ def generate_launch_description():
             respawn=True,
             respawn_delay=3.0,
         ),
+        # K230 视觉接收：K230 未接/未启动时只会重连，不影响建图
+        Node(
+            package='termite_bringup',
+            executable='vision_receiver',
+            name='vision_receiver',
+            parameters=[{'port': '/dev/k230', 'frame_id': 'k230_camera'}],
+            output='screen',
+            respawn=True,
+            respawn_delay=3.0,
+        ),
     ])

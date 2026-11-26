@@ -124,6 +124,21 @@ def main():
         src = open(args[1], 'r').read()
         wait = float(args[2]) if len(args) > 2 else 3.0
         print(exec_code(s, src, wait))
+    elif args and args[0] == '--put':
+        local, remote = args[1], args[2]
+        content = open(local, 'r', encoding='utf-8').read()
+        d = remote.rsplit('/', 1)[0]
+        print(exec_code(s, 'import os\ntry:\n os.mkdir(%r)\nexcept Exception:\n pass\nf=open(%r,"w")' % (d, remote), 1.0))
+        for i in range(0, len(content), 200):
+            chunk = content[i:i + 200]
+            s.write(('f.write(' + repr(chunk) + ')\r').encode())
+            time.sleep(0.05)
+            try:
+                s.read(16384)
+            except serial.SerialException:
+                print('串口断开（第 %d 字节）' % i)
+                break
+        print(exec_code(s, 'f.close()\nimport os\nprint("PUT_OK", os.stat(%r)[6])' % remote, 1.5))
     elif args and args[0] == '--file':
         n = int(args[2]) if len(args) > 2 else 2000
         src = 'f=open(%r)\nprint(f.read(%d))\nf.close()' % (args[1], n)
