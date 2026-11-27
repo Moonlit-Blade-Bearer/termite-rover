@@ -41,10 +41,11 @@ class TermiteDetector(Node):
         self.declare_parameter('cfg_port', '/dev/radar_cfg')
         self.declare_parameter('data_port', '/dev/radar_data')
         self.declare_parameter('cfg_file', '/root/ros2_ws/radar_dataset.cfg')
-        self.declare_parameter('ckpt', '/root/ros2_ws/ml/best_full.pth')
+        self.declare_parameter('ckpt', '/root/ros2_ws/ml/best_multitask.pth')
         self.declare_parameter('topic', '/termite/detection')
         self.declare_parameter('stride', 128)          # 每 128 帧（1.28s）推理一次
         self.declare_parameter('configure_radar', True)
+        self.declare_parameter('detect_threshold', 0.5)
 
         self.pub = self.create_publisher(TermiteDetection, self.get_parameter('topic').value, 10)
         self.stride = int(self.get_parameter('stride').value)
@@ -52,13 +53,20 @@ class TermiteDetector(Node):
         # ---- 模型 ----
         ckpt_path = self.get_parameter('ckpt').value
         ck = torch.load(ckpt_path, map_location='cpu')
-        self.net = model.build_model()
+        self.multitask = (ck.get('task') == 'multitask')
+        if self.multitask:
+            self.net = model.build_multitask_model()
+        else:
+            self.net = model.build_model()
         self.net.load_state_dict(ck['model_state'])
         self.net.eval()
         self.stats = (np.asarray(ck['feat_mean'], dtype=np.float32),
                       np.asarray(ck['feat_std'], dtype=np.float32),
                       float(ck['y_mean']), float(ck['y_std']))
-        self.get_logger().info('模型已加载：%s（%d 参数）' % (ckpt_path, model.count_params(self.net)))
+        self.threshold = float(self.get_parameter('detect_threshold').value)
+        self.get_logger().info(
+            '模型已加载：%s（task=%s，%d 参数）'
+            % (ckpt_path, 'multitask' if self.multitask else 'depth', model.count_params(self.net)))
 
         # ---- 状态 ----
         self.stop = False
@@ -66,6 +74,8 @@ class TermiteDetector(Node):
         self.frames = 0
         self.windows_done = 0
         self.depth = float('nan')
+        self.prob = 0.0
+        self.detected = False
         self.last_window_time = 0.0
         self.win_queue = queue.Queue(maxsize=1)
         self.lock = threading.Lock()
@@ -159,13 +169,30 @@ class TermiteDetector(Node):
                 win = self.win_queue.get(timeout=0.5)
             except queue.Empty:
                 continue
+            t0 = time.time()
             try:
-                depth, times = pipeline.full_pipeline(win, self.net, self.stats, device='cpu')
+                if self.multitask:
+                    dyn, static_c = pipeline.svd_step(win)
+                    feats = pipeline.feature_step(dyn, static_c,
+                                                  norm=(self.stats[0], self.stats[1]))
+                    x = torch.from_numpy(feats).unsqueeze(0)
+                    with torch.no_grad():
+                        d_raw, logit = self.net(x)
+                    depth = float(pipeline.decode_step(
+                        d_raw.cpu().numpy().ravel(), self.stats[2], self.stats[3])[0])
+                    prob = float(torch.sigmoid(logit).item())
+                    times = {'T_total': time.time() - t0}
+                else:
+                    depth, times = pipeline.full_pipeline(win, self.net, self.stats, device='cpu')
+                    prob = 0.0
             except Exception as exc:
                 self.get_logger().warn('推理失败：%s' % exc)
                 continue
+            detected = prob >= self.threshold
             with self.lock:
                 self.depth = float(depth)
+                self.prob = float(prob)
+                self.detected = bool(detected)
                 self.windows_done += 1
                 self.last_window_time = time.time()
                 frames = self.frames
@@ -173,8 +200,8 @@ class TermiteDetector(Node):
             msg.header.stamp = self.get_clock().now().to_msg()
             msg.header.frame_id = 'radar'
             msg.valid = True
-            msg.detected = False          # 分类模型上线前固定 false
-            msg.confidence = 0.0
+            msg.detected = bool(detected)      # 分类模型输出
+            msg.confidence = float(prob)
             msg.depth_mm = float(depth)
             msg.infer_ms = float(times['T_total'] * 1000.0)
             msg.frames = int(C.WINDOW_LEN)
@@ -190,8 +217,9 @@ class TermiteDetector(Node):
         el = time.time() - self.t0
         with self.lock:
             self.get_logger().info(
-                'frames=%d fps=%.1f windows=%d depth=%.2fmm'
-                % (self.frames, self.frames / max(el, 1), self.windows_done, self.depth))
+                'frames=%d fps=%.1f windows=%d depth=%.2fmm P=%.2f detected=%s'
+                % (self.frames, self.frames / max(el, 1), self.windows_done,
+                   self.depth, self.prob, self.detected))
 
     def destroy_node(self):
         self.stop = True
